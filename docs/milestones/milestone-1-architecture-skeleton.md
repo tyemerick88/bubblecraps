@@ -1,0 +1,300 @@
+# Milestone 1: Architecture Skeleton
+
+- Status: Draft for review
+- Roadmap source: [docs/roadmap.md](../roadmap.md)
+- Primary architecture reference: [docs/PAG-mini-v0.6.md](../PAG-mini-v0.6.md)
+- Depends on: [Milestone 0](milestone-0-foundation-and-guardrails.md)
+
+## Milestone Intent
+
+Milestone 1 creates the code scaffolding across all architectural layers. No behavioral logic is implemented yet. The goal is to establish the structural foundation: folder organization, module stubs, import paths, and layer boundaries that will guide feature implementation in later milestones.
+
+## What Will Be Accomplished
+
+By the end of Milestone 1, the project will have:
+- A complete folder and package structure matching PAG layout.
+- All planned domain modules as importable stubs (state, history, snapshot, statistics, settings, game_session).
+- SessionController Qt bridge stub with placeholder signal definitions.
+- GUI shell stub capable of receiving and displaying state updates.
+- Placeholder modules for future persistence and configuration.
+- An importable but non-functional application entry point.
+- All imports resolve cleanly with no circular dependencies.
+- Session/domain layer verified to contain zero Qt type imports.
+
+## In Scope
+
+- Create all planned folder structures and package directories.
+- Create module stubs for session domain layer.
+- Create SessionController stub with Qt signal contract.
+- Create GUI shell stub with minimal layout structure.
+- Create test directory structure and placeholder test modules.
+- Create assets directory structure matching PAG.
+- Establish __init__.py files and module-level docstrings.
+- Verify import hygiene across layers.
+
+## Out of Scope
+
+- Implementing state transition logic.
+- Implementing GUI rendering or interactivity.
+- Implementing any game rules or session orchestration logic.
+- Implementing persistence serialization.
+- Creating actual asset files (images, sounds, fonts).
+- Implementing tests beyond import verification.
+
+## Detailed Work Packages
+
+## WP1.1: Root Project Structure
+
+Goal:
+- Create the top-level folder layout and entry points.
+
+Tasks:
+- Create root `main.py` as a thin application entry point.
+- Create `src/bubblecraps/` and `src/bubblecraps/__init__.py` with version metadata.
+- Create `src/bubblecraps/__main__.py` to support `python -m bubblecraps`.
+- Create `src/bubblecraps/application/bootstrap.py` as the composition root used by both entry
+  points.
+- Ensure entry points import only the application bootstrap, not controller or GUI modules directly.
+- Verify both entry points import without errors.
+
+Deliverable:
+- Root `main.py`, package `__main__.py`, package metadata, and application bootstrap created and
+  importable.
+
+## WP1.2: Session Domain Package Structure
+
+Goal:
+- Create the pure-Python session layer with placeholder classes.
+
+Tasks:
+- Create `src/bubblecraps/session/` and its `__init__.py`.
+- Create `src/bubblecraps/session/state.py` with stub class definitions:
+  - GamePhase (enum)
+  - AvailableActions (dataclass)
+  - GameState (dataclass)
+- Create `src/bubblecraps/session/history.py` with stub class definitions:
+  - RollRecord (dataclass)
+  - ShooterRecord (dataclass)
+  - SessionEvent (dataclass)
+  - SessionHistory (class)
+- Create `src/bubblecraps/session/snapshot.py` with stub class:
+  - SessionSnapshot (dataclass)
+- Create `src/bubblecraps/session/settings.py` with stub class:
+  - SessionConfiguration (dataclass)
+- Create `src/bubblecraps/session/statistics.py` with stub class:
+  - SessionStatistics (class)
+- Create `src/bubblecraps/session/game_session.py` with stub class:
+  - GameSession (class with placeholder methods: roll, undo, place_bet, etc.)
+- Verify zero Qt imports in any session module.
+
+Deliverable:
+- All session modules created with minimal docstrings and stub class signatures.
+- No Qt framework types present in session modules.
+
+## WP1.3: Controller Bridge Package Structure
+
+Goal:
+- Create the Qt-aware controller layer.
+
+Tasks:
+- Create `src/bubblecraps/controller/` and its `__init__.py`.
+- Create `src/bubblecraps/controller/session_controller.py` with stub class:
+  - SessionController(QObject) with placeholder signals:
+    - state_changed = Signal(GameState)
+    - session_loaded = Signal()
+    - session_saved = Signal()
+    - session_reset = Signal()
+  - Placeholder methods: roll(), undo(), place_bet(), etc.
+- Verify controller imports GameState without creating circular dependencies.
+
+Deliverable:
+- SessionController stub created with Qt signal contract.
+
+## WP1.4: GUI Package Structure
+
+Goal:
+- Create the GUI layer with minimal shell scaffolding.
+
+Tasks:
+- Create `src/bubblecraps/gui/` and its `__init__.py`.
+- Create `src/bubblecraps/gui/main_window.py` with stub class:
+  - MainWindow(QMainWindow)
+  - Placeholder layout with title, status bar, central widget.
+- Create `src/bubblecraps/gui/table_widget.py` with stub class:
+  - TableWidget (QWidget or QGraphicsView) for craps table rendering.
+- Create `src/bubblecraps/gui/animations.py` with a stub for future animation logic.
+- Create `src/bubblecraps/gui/styles.py` with a stub for stylesheets.
+- Verify GUI modules do not import from session domain directly.
+
+Deliverable:
+- GUI shell structure created with placeholder widget classes.
+
+## WP1.5: Application and Persistence Placeholders
+
+Goal:
+- Place infrastructure stubs in the layer that owns each responsibility.
+
+Tasks:
+- Create `src/bubblecraps/application/` and its `__init__.py`.
+- Create `src/bubblecraps/application/configuration.py` for application-preference loading stubs.
+- Create `src/bubblecraps/application/logging.py` for centralized logging setup stubs.
+- Create `src/bubblecraps/session/persistence.py` for future `.bcs` serialization stubs.
+- Keep session rules and action legality in `GameSession` and `AvailableActions`; do not add generic
+  validation helpers.
+- Keep constants in their owning modules; do not create a generic `utils` or `constants` package.
+
+Deliverable:
+- Application configuration, logging, and session persistence ownership is represented by importable
+  stubs.
+
+## WP1.6: Asset Directory Structure
+
+Goal:
+- Create the asset folder hierarchy per PAG.
+
+Tasks:
+- Create `src/bubblecraps/assets/` and its `__init__.py`.
+- Create `src/bubblecraps/assets/asset_manager.py` with the semantic `AssetManager` interface.
+- Create the repository-level physical `assets/` directory with subdirectories:
+  - assets/chips/
+  - assets/dice/
+  - assets/table/
+  - assets/puck/
+  - assets/buttons/
+  - assets/icons/
+  - assets/fonts/
+  - assets/sounds/ with subdirectories:
+    - sounds/dice/
+    - sounds/chips/
+    - sounds/ui/
+    - sounds/payouts/
+  - assets/themes/
+- Create .gitkeep files in empty directories so folder structure is preserved.
+
+Deliverable:
+- AssetManager package and physical asset directory structure created and tracked in git.
+
+## WP1.7: Test Scaffold
+
+Goal:
+- Create test directory structure and placeholder tests.
+
+Tasks:
+- Add focused import and public-contract tests under the existing `tests/` directory.
+- Add test modules mirroring each new package; do not add empty placeholder tests.
+- Verify all tests import cleanly and can be discovered by pytest.
+
+Deliverable:
+- Import and public-contract tests for the skeleton modules.
+
+## WP1.8: Configuration Placeholders
+
+Goal:
+- Create placeholders for future session and app configuration loading.
+
+Tasks:
+- Keep application preferences in `application/configuration.py`.
+- Keep session configuration models in `session/settings.py`.
+- Keep `.bcs` session persistence in `session/persistence.py`.
+- Add module docstrings describing each format boundary without implementing serialization.
+
+Deliverable:
+- Application preferences, session settings, and session persistence have distinct owners.
+
+## WP1.9: Dependency Graph Verification
+
+Goal:
+- Ensure import structure matches architecture contract.
+
+Tasks:
+- Verify the import dependency graph:
+  - session modules contain no Qt imports.
+  - controller imports session state but not GUI, assets, application, or `crapssim`.
+  - GUI imports controller and assets but not session or `crapssim`.
+  - assets import no application, controller, GUI, session, or `crapssim` modules.
+  - root `main.py` and package `__main__.py` import only the application bootstrap.
+- Create a simple import test that confirms no circular dependencies exist.
+- Keep `tests/test_architecture.py` passing as each package is introduced.
+- Reference the Milestone 0 architecture contract rather than duplicating dependency policy in code
+  comments.
+
+Deliverable:
+- Import graph verification test or documentation.
+
+## WP1.10: Root README Updates
+
+Goal:
+- Add pointers from README to Milestone 1 structure documentation.
+
+Tasks:
+- Add a "Project Structure" section to README explaining the folder layout.
+- Reference [docs/PAG-mini-v0.6.md](../PAG-mini-v0.6.md) for architecture.
+- Add a validation command: "python -c 'import bubblecraps; print(bubblecraps.__version__)'"
+
+Deliverable:
+- README updated with structure overview and verification command.
+
+## Deliverables Summary
+
+Milestone 1 is complete only when all items exist and are reviewable:
+- Folder and package structure matching PAG template.
+- All planned session domain modules as importable stubs.
+- SessionController stub with Qt signal contract.
+- GUI shell stub with placeholder widgets.
+- Test directory and placeholder test modules.
+- Asset directory structure.
+- Application configuration, logging, and session persistence placeholders.
+- Import verification tests or documentation.
+- Updated README with structure overview.
+
+## Acceptance Criteria
+
+All criteria must be true:
+- All planned `src/bubblecraps` packages exist and are importable.
+- Root `main.py` and package `__main__.py` can be invoked without errors.
+- Session domain modules contain zero Qt imports.
+- Controller and GUI modules follow dependency direction policy from Milestone 0.
+- Test suite can be discovered and invoked (pytest -v).
+- Asset directory structure is preserved in git via .gitkeep or equivalent.
+
+## Verification Checklist
+
+Reviewer checklist:
+- Confirm all folders and modules match the structure defined in
+  [docs/PAG-mini-v0.6.md](../PAG-mini-v0.6.md) project structure section.
+- Confirm `src/bubblecraps/session/state.py`, `history.py`, and the other session modules exist and are
+  importable.
+- Confirm SessionController exists with placeholder signal definitions.
+- Confirm both entry points invoke the application bootstrap without bypassing it.
+- Confirm pytest discovers all test modules.
+- Run `python -m compileall -q main.py src/bubblecraps` to verify syntax.
+- Run `python tools/check.py`, including the automated architecture test.
+- Verify README contains a "Project Structure" section.
+
+## Risks and Mitigations
+
+Risk: Circular import dependencies introduced early.
+- Mitigation: Use import verification test to catch early; enforce Milestone 0 policy strictly.
+
+Risk: Missing stub classes cause later milestones to fail type checking.
+- Mitigation: Ensure all referenced class names are defined as stubs even if empty.
+
+Risk: Asset directories are not preserved in git.
+- Mitigation: Use .gitkeep files in empty directories.
+
+Risk: Incomplete module stubs lack necessary docstrings.
+- Mitigation: Add module-level and class-level docstrings referencing PAG for future implementation guidance.
+
+## Milestone 1 Exit Decision
+
+Decision options:
+- Pass: All acceptance criteria satisfied, all modules importable, structure verified.
+- Pass with follow-ups: Minor documentation or .gitkeep gaps captured with owners.
+- Hold: Circular dependencies detected, required modules missing, or architecture boundary violations found.
+
+## Review Notes
+
+Use this section to capture edits before finalizing:
+- Open item 1:
+- Open item 2:
+- Open item 3:
