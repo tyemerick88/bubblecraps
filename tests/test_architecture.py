@@ -1,10 +1,19 @@
 from __future__ import annotations
 
 import ast
+import importlib
+import pkgutil
 from pathlib import Path
+
+import bubblecraps
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 PACKAGE_ROOT = PROJECT_ROOT / "src" / "bubblecraps"
+ENTRY_POINTS = (
+    PROJECT_ROOT / "main.py",
+    PACKAGE_ROOT / "__main__.py",
+)
+BOOTSTRAP_MODULE = "bubblecraps.application.bootstrap"
 
 FORBIDDEN_IMPORTS = {
     "application": ("crapssim",),
@@ -79,3 +88,31 @@ def test_runtime_layers_follow_import_contract() -> None:
                     violations.append(f"{relative_path}:{line_number} imports {module}")
 
     assert not violations, "Architecture contract violations:\n" + "\n".join(violations)
+
+
+def test_entry_points_import_only_the_application_bootstrap() -> None:
+    violations: list[str] = []
+
+    for path in ENTRY_POINTS:
+        project_imports = [
+            module
+            for _, module in _imports_in(path)
+            if _matches_prefix(module, "bubblecraps")
+        ]
+        if project_imports != [BOOTSTRAP_MODULE]:
+            relative_path = path.relative_to(PROJECT_ROOT)
+            violations.append(f"{relative_path} imports {project_imports}")
+
+    assert not violations, "Entry point import violations:\n" + "\n".join(violations)
+
+
+def test_all_runtime_modules_import_without_cycles() -> None:
+    module_names = [
+        module.name
+        for module in pkgutil.walk_packages(
+            bubblecraps.__path__, f"{bubblecraps.__name__}."
+        )
+    ]
+
+    for module_name in module_names:
+        importlib.import_module(module_name)

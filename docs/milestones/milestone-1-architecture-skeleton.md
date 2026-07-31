@@ -1,6 +1,6 @@
 # Milestone 1: Architecture Skeleton
 
-- Status: Draft for review
+- Status: Complete
 - Roadmap source: [docs/roadmap.md](../roadmap.md)
 - Primary architecture reference: [docs/PAG-mini-v0.6.md](../PAG-mini-v0.6.md)
 - Depends on: [Milestone 0](milestone-0-foundation-and-guardrails.md)
@@ -9,9 +9,9 @@
 
 Milestone 1 creates the code scaffolding across all architectural layers. No behavioral logic is implemented yet. The goal is to establish the structural foundation: folder organization, module stubs, import paths, and layer boundaries that will guide feature implementation in later milestones.
 
-## What Will Be Accomplished
+## Completion Summary
 
-By the end of Milestone 1, the project will have:
+Milestone 1 delivered:
 - A complete folder and package structure matching PAG layout.
 - All planned domain modules as importable stubs (state, history, snapshot, statistics, settings, game_session).
 - SessionController Qt bridge stub with placeholder signal definitions.
@@ -45,6 +45,8 @@ By the end of Milestone 1, the project will have:
 
 ## WP1.1: Root Project Structure
 
+Status: Complete
+
 Goal:
 - Create the top-level folder layout and entry points.
 
@@ -62,6 +64,8 @@ Deliverable:
   importable.
 
 ## WP1.2: Session Domain Package Structure
+
+Status: Complete
 
 Goal:
 - Create the pure-Python session layer with placeholder classes.
@@ -93,6 +97,8 @@ Deliverable:
 
 ## WP1.3: Controller Bridge Package Structure
 
+Status: Complete
+
 Goal:
 - Create the Qt-aware controller layer.
 
@@ -111,6 +117,8 @@ Deliverable:
 - SessionController stub created with Qt signal contract.
 
 ## WP1.4: GUI Package Structure
+
+Status: Complete
 
 Goal:
 - Create the GUI layer with minimal shell scaffolding.
@@ -131,6 +139,8 @@ Deliverable:
 
 ## WP1.5: Application and Persistence Placeholders
 
+Status: Complete
+
 Goal:
 - Place infrastructure stubs in the layer that owns each responsibility.
 
@@ -148,6 +158,8 @@ Deliverable:
   stubs.
 
 ## WP1.6: Asset Directory Structure
+
+Status: Complete
 
 Goal:
 - Create the asset folder hierarchy per PAG.
@@ -176,6 +188,8 @@ Deliverable:
 
 ## WP1.7: Test Scaffold
 
+Status: Complete
+
 Goal:
 - Create test directory structure and placeholder tests.
 
@@ -188,6 +202,8 @@ Deliverable:
 - Import and public-contract tests for the skeleton modules.
 
 ## WP1.8: Configuration Placeholders
+
+Status: Complete
 
 Goal:
 - Create placeholders for future session and app configuration loading.
@@ -202,6 +218,8 @@ Deliverable:
 - Application preferences, session settings, and session persistence have distinct owners.
 
 ## WP1.9: Dependency Graph Verification
+
+Status: Complete
 
 Goal:
 - Ensure import structure matches architecture contract.
@@ -223,6 +241,8 @@ Deliverable:
 
 ## WP1.10: Root README Updates
 
+Status: Complete
+
 Goal:
 - Add pointers from README to Milestone 1 structure documentation.
 
@@ -236,40 +256,43 @@ Deliverable:
 
 ## Deliverables Summary
 
-Milestone 1 is complete only when all items exist and are reviewable:
-- Folder and package structure matching PAG template.
-- All planned session domain modules as importable stubs.
-- SessionController stub with Qt signal contract.
-- GUI shell stub with placeholder widgets.
-- Test directory and placeholder test modules.
-- Asset directory structure.
-- Application configuration, logging, and session persistence placeholders.
-- Import verification tests or documentation.
-- Updated README with structure overview.
+All Milestone 1 deliverables are complete and reviewable:
+
+- [x] Folder and package structure matching the PAG template.
+- [x] All planned session domain modules as importable stubs.
+- [x] SessionController stub with Qt signal contract.
+- [x] GUI shell stub with placeholder widgets.
+- [x] Focused import and public-contract tests mirroring the runtime packages.
+- [x] Asset directory structure preserved with tracked marker files.
+- [x] Application configuration, logging, and session persistence placeholders.
+- [x] Automated dependency-graph, entry-point, and circular-import verification.
+- [x] Updated README with structure overview and validation commands.
 
 ## Acceptance Criteria
 
-All criteria must be true:
-- All planned `src/bubblecraps` packages exist and are importable.
-- Root `main.py` and package `__main__.py` can be invoked without errors.
-- Session domain modules contain zero Qt imports.
-- Controller and GUI modules follow dependency direction policy from Milestone 0.
-- Test suite can be discovered and invoked (pytest -v).
-- Asset directory structure is preserved in git via .gitkeep or equivalent.
+All criteria are satisfied:
+
+- [x] All planned `src/bubblecraps` packages exist and are importable.
+- [x] Root `main.py` and package `__main__.py` can be invoked without errors.
+- [x] Session domain modules contain zero Qt imports.
+- [x] Controller and GUI modules follow the dependency direction policy from Milestone 0.
+- [x] The test suite is discoverable and passes under `pytest -v`.
+- [x] The asset directory structure is preserved in git via `.gitkeep` files.
 
 ## Verification Checklist
 
-Reviewer checklist:
-- Confirm all folders and modules match the structure defined in
+Completed reviewer checklist:
+
+- [x] Confirm all folders and modules match the structure defined in
   [docs/PAG-mini-v0.6.md](../PAG-mini-v0.6.md) project structure section.
-- Confirm `src/bubblecraps/session/state.py`, `history.py`, and the other session modules exist and are
+- [x] Confirm `src/bubblecraps/session/state.py`, `history.py`, and the other session modules exist and are
   importable.
-- Confirm SessionController exists with placeholder signal definitions.
-- Confirm both entry points invoke the application bootstrap without bypassing it.
-- Confirm pytest discovers all test modules.
-- Run `python -m compileall -q main.py src/bubblecraps` to verify syntax.
-- Run `python tools/check.py`, including the automated architecture test.
-- Verify README contains a "Project Structure" section.
+- [x] Confirm SessionController exists with placeholder signal definitions.
+- [x] Confirm both entry points invoke the application bootstrap without bypassing it.
+- [x] Confirm pytest discovers all test modules.
+- [x] Run `python -m compileall -q main.py src/bubblecraps` to verify syntax.
+- [x] Run `python tools/check.py`, including the automated architecture test.
+- [x] Verify README contains a "Project Structure" section.
 
 ## Risks and Mitigations
 
@@ -287,14 +310,27 @@ Risk: Incomplete module stubs lack necessary docstrings.
 
 ## Milestone 1 Exit Decision
 
-Decision options:
-- Pass: All acceptance criteria satisfied, all modules importable, structure verified.
-- Pass with follow-ups: Minor documentation or .gitkeep gaps captured with owners.
-- Hold: Circular dependencies detected, required modules missing, or architecture boundary violations found.
+**Decision: Pass.** All acceptance criteria are satisfied, all planned modules are importable, the
+documented structure is present, and the Milestone 0 dependency boundaries remain enforced.
 
-## Review Notes
+## Signoff Evidence
 
-Use this section to capture edits before finalizing:
-- Open item 1:
-- Open item 2:
-- Open item 3:
+- Signoff date: 2026-07-31.
+- Engine source: pinned sibling `crapssim` checkout at
+  `a785b6a55e7f87b4302526ada30c5086be983574`.
+- Package verification: `import bubblecraps` reports version
+  `0.0.0-alpha.1.2026-07-31`.
+- Entry points: root `main.py` and `python -m bubblecraps` both exit successfully through the
+  application bootstrap.
+- Architecture verification: runtime-layer boundaries, entry-point imports, and complete package
+  imports pass automated tests.
+- Session boundary: no Qt imports exist under `src/bubblecraps/session/`.
+- Test result: 21 tests passed, including application, assets, controller, GUI, session,
+  architecture, documentation, check-runner, and engine contract coverage.
+- Quality gates: Ruff format passed, Ruff lint passed, strict first-party mypy passed, pytest passed,
+  and `pip check` reported no broken requirements.
+- Asset structure: every required directory is preserved with a tracked `.gitkeep` file.
+- Scope audit: no gameplay rules, persistence implementation, controller behavior, GUI rendering,
+  or asset-loading behavior was introduced.
+- Handoff: Milestone 2 planning is captured in
+  [milestone-2-domain-core-completion.md](milestone-2-domain-core-completion.md).

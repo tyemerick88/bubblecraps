@@ -18,6 +18,24 @@ Python is fixed to one patch release so local development and future CI use the 
 features and standard-library behavior. `.python-version` is advisory for version managers; always
 verify with `python --version` after activating the environment.
 
+## Version Policy
+
+Bubble Craps follows [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html). During initial
+milestone development, completed milestones use this prerelease format:
+
+```text
+0.0.0-alpha.<milestone_number>.<completion_date>
+```
+
+The milestone number is an unpadded positive integer, and the completion date uses `YYYY-MM-DD`.
+Both are dot-separated prerelease identifiers following the `alpha` label. The package version is
+updated only after the milestone acceptance criteria pass. Until the first planned `0.1.0` release,
+the public API remains unstable and may change between milestone versions.
+
+The canonical runtime version is `bubblecraps.__version__`. Documentation, tests, release tags, and
+future package metadata must agree with that value. Git tags may use the conventional `v` prefix,
+but the semantic version value itself does not include `v`.
+
 ## Dependency Policy
 
 Runtime dependencies belong in `requirements.txt`; development-only tools belong in

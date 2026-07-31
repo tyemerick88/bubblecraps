@@ -1,11 +1,34 @@
 # Bubble Craps
 
 Bubble Craps is a PySide6 desktop application intended to recreate an authentic casino bubble craps
-experience. It uses [crapssim](https://github.com/tyemerick88/crapssim) as the only game-rules engine.
+experience. It uses [crapssim](https://github.com/skent259/crapssim) as the only game-rules engine.
 
-**Milestone 0: Foundation and Guardrails is complete.** Gameplay and the GUI are not implemented yet;
-Milestone 1 will create the importable application skeleton while preserving the architecture,
-environment, and executable quality checks established here.
+**Milestone 1: Architecture Skeleton is complete.** The repository now has importable application,
+session, controller, GUI, and asset shells while preserving the architecture, environment, and
+executable quality checks established in Milestone 0. Gameplay, persistence, resource loading, and
+GUI rendering remain future work.
+
+Current version: `0.0.0-alpha.1.2026-07-31`
+
+## Versioning
+
+Bubble Craps follows [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html). Until all
+planned milestones are complete and version `0.1.0` is released, milestone completion versions use
+this prerelease format:
+
+```text
+0.0.0-alpha.<milestone_number>.<completion_date>
+```
+
+- `milestone_number` is the completed roadmap milestone without leading zeroes.
+- `completion_date` uses the ISO calendar form `YYYY-MM-DD`.
+- The version core remains `0.0.0` during milestone development.
+- The `alpha` prerelease label indicates that the public API is unstable and may change.
+- A milestone version is assigned only when that milestone satisfies its acceptance criteria.
+
+For example, Milestone 1 completed on July 31, 2026 is
+`0.0.0-alpha.1.2026-07-31`. The first planned release after all roadmap milestones are complete is
+`0.1.0`.
 
 ## Requirements
 
@@ -36,7 +59,7 @@ Clone both repositories into one parent directory:
 ```bash
 mkdir bubblecraps-workspace
 cd bubblecraps-workspace
-git clone https://github.com/tyemerick88/crapssim.git
+git clone https://github.com/skent259/crapssim.git
 git clone https://github.com/tyemerick88/bubblecraps.git
 git -C crapssim checkout --detach "$(cat bubblecraps/.crapssim-revision)"
 cd bubblecraps
@@ -76,8 +99,41 @@ mode, so committed changes in the sibling checkout are immediately available wit
 
 ## Run Status
 
-Milestone 0 deliberately has no application entry point. `main.py` and the importable package shell
-arrive in Milestone 1; adding a fake launcher here would blur that milestone boundary.
+Milestone 1 provides non-functional application entry points. The bootstrap currently exits
+successfully without creating a GUI, game session, or persisted state:
+
+```bash
+python main.py
+PYTHONPATH=src python -m bubblecraps
+```
+
+Validate the importable package from the repository checkout by exposing the `src` root first:
+
+```bash
+export PYTHONPATH=src
+python -c 'import bubblecraps; print(bubblecraps.__version__)'
+```
+
+## Project Structure
+
+The Milestone 1 source layout separates runtime responsibilities by the architecture contract:
+
+```text
+main.py                         # Thin application entry point
+src/bubblecraps/
+├── application/                # Bootstrap, preferences, and diagnostics ownership
+├── assets/                     # Semantic AssetManager interface
+├── controller/                 # Qt SessionController bridge
+├── gui/                        # Window, table, animation, and style shells
+└── session/                    # Pure-Python session models and orchestration boundary
+assets/                         # Physical images, fonts, sounds, and themes
+tests/                          # Import, contract, and architecture checks
+```
+
+The dependency direction is `application -> gui -> controller -> session -> crapssim`, with GUI
+asset access flowing through `bubblecraps.assets.AssetManager`. The session layer has no Qt
+dependency. See the [Project Architecture Guide](docs/PAG-mini-v0.6.md) and the
+[architecture contract](docs/architecture-contract.md) for the authoritative boundaries.
 
 Confirm that the required unreleased Crapless engine is active:
 

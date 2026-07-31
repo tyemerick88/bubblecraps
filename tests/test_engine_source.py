@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from typing import Literal, get_type_hints
 
 from crapssim.rules import CraplessRules
+from crapssim.table import TableSettings
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 ENGINE_ROOT = PROJECT_ROOT.parent / "crapssim"
@@ -55,3 +57,9 @@ def test_crapless_rules_are_available_from_engine() -> None:
     assert rules.come_out_losers() == []
     assert not rules.allow_dont_pass()
     assert not rules.allow_dont_come()
+
+
+def test_table_settings_define_come_out_working_policy_options() -> None:
+    annotations = get_type_hints(TableSettings)
+
+    assert annotations["come_out_working_policy"] == Literal["legacy", "real_casino"]
