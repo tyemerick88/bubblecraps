@@ -3,31 +3,41 @@
 Bubble Craps is a PySide6 desktop application intended to recreate an authentic casino bubble craps
 experience. It uses [crapssim](https://github.com/skent259/crapssim) as the only game-rules engine.
 
-**Milestone 1: Architecture Skeleton is complete.** The repository now has importable application,
-session, controller, GUI, and asset shells while preserving the architecture, environment, and
-executable quality checks established in Milestone 0. Gameplay, persistence, resource loading, and
-GUI rendering remain future work.
+**Milestone 2 implementation is underway.** WP2.1 establishes the reconciled domain contracts,
+including immutable command outcomes, explicit ruleset and vig configuration, aggregate monetary
+types, and stable deferred-command behavior. Gameplay orchestration, persistence, controller wiring,
+and GUI rendering remain future work.
 
-Current version: `0.0.0-alpha.1.2026-07-31`
+Current version: `0.0.0-alpha.2.1.2026-08-26`
 
 ## Versioning
 
 Bubble Craps follows [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html). Until all
-planned milestones are complete and version `0.1.0` is released, milestone completion versions use
-this prerelease format:
+planned milestones are complete and version `0.1.0` is released, accepted work-package checkpoints
+use this prerelease format:
+
+```text
+0.0.0-alpha.<milestone_number>.<work_package_number>.<completion_date>
+```
+
+- `milestone_number` is the completed roadmap milestone without leading zeroes.
+- `work_package_number` is the accepted work package within that milestone without leading zeroes.
+- `completion_date` uses the ISO calendar form `YYYY-MM-DD`.
+- The version core remains `0.0.0` during milestone development.
+- The `alpha` prerelease label indicates that the public API is unstable and may change.
+- A work-package version is assigned only after that package's implementation and focused quality
+	gates pass.
+
+When a complete milestone satisfies all acceptance criteria, its release omits the work-package
+identifier:
 
 ```text
 0.0.0-alpha.<milestone_number>.<completion_date>
 ```
 
-- `milestone_number` is the completed roadmap milestone without leading zeroes.
-- `completion_date` uses the ISO calendar form `YYYY-MM-DD`.
-- The version core remains `0.0.0` during milestone development.
-- The `alpha` prerelease label indicates that the public API is unstable and may change.
-- A milestone version is assigned only when that milestone satisfies its acceptance criteria.
-
 For example, Milestone 1 completed on July 31, 2026 is
-`0.0.0-alpha.1.2026-07-31`. The first planned release after all roadmap milestones are complete is
+`0.0.0-alpha.1.2026-07-31`, while WP2.1 completed on August 26, 2026 is
+`0.0.0-alpha.2.1.2026-08-26`. The first planned release after all roadmap milestones are complete is
 `0.1.0`.
 
 ## Requirements

@@ -1,6 +1,6 @@
 # Milestone 2: Domain Core Completion
 
-- Status: Accepted, awaiting implementation
+- Status: Implementation in progress; WP2.1 complete
 - Roadmap source: [docs/roadmap.md](../roadmap.md)
 - Primary architecture reference: [docs/PAG-mini-v0.6.md](../PAG-mini-v0.6.md)
 - Supporting design reference: [docs/PAG-v0.6.md](../PAG-v0.6.md)
@@ -35,8 +35,9 @@ Milestone 2 targets the installed, published `crapssim==0.4.1` API as it exists:
 - Bubble Craps does not inspect private placement keys or other underscore-prefixed engine members.
 - Bubble Craps does not use reflection, monkeypatching, engine subclassing, or copied engine rules to
   fill API gaps.
-- Tables use engine defaults. Custom `Table.settings` overrides and a casino-profile abstraction are
-  deferred until a later milestone proves they are required and supportable.
+- Tables use engine defaults except for two reviewed Bubble Craps vig policies:
+  `vig_rounding="none"` and the session's `vig_paid_on_win` value. Arbitrary `Table.settings`
+  overrides and a casino-profile abstraction remain deferred.
 - `Player.add_bet` and `Player.remove_bet` silently accept or reject attempts and return `None`.
   Bubble Craps may observe whether public state changed, but it must not invent a specific engine
   rejection reason.
@@ -51,7 +52,8 @@ Milestone 2 targets the installed, published `crapssim==0.4.1` API as it exists:
 ## What Will Be Accomplished
 
 - A constructible `GameSession` owning one `crapssim.Table` and one `crapssim.Player`.
-- Explicit Classic or Crapless ruleset selection with engine-default table settings.
+- Explicit Classic or Crapless ruleset selection with fixed unrounded vig and configurable
+  pay-on-win commission behavior.
 - A strategy-neutral interactive player using `crapssim.strategy.tools.NullStrategy`.
 - A reviewed adapter for a deliberately limited set of bet requests and detached projections.
 - Deterministic and random single-roll orchestration through `crapssim.TableUpdate`.
@@ -113,7 +115,10 @@ Milestone 2 targets the installed, published `crapssim==0.4.1` API as it exists:
 
 ### Snapshots And Undo
 
-- Milestone 2 does not create `SessionSnapshot` values, capture snapshots, or maintain an undo stack.
+- The Milestone 1 `GameSession` shell retains its `undo_stack: list[SessionSnapshot]` type declaration
+  to preserve the target architecture without remove-and-reintroduce churn.
+- Milestone 2 does not initialize, populate, read, or restore from that stack and does not create or
+  capture `SessionSnapshot` values.
 - `undo`, `save`, and `load` return `NOT_IMPLEMENTED`.
 - Snapshot design, restoration, serialization, and deterministic undo belong to Milestone 3.
 
@@ -160,7 +165,8 @@ rules in Bubble Craps.
 
 - Pure-Python domain implementation under `src/bubblecraps/session/`.
 - Integration with the exact published `crapssim==0.4.1` API.
-- Classic and Crapless table construction with committed engine defaults.
+- Classic and Crapless table construction with committed engine defaults, fixed
+  `vig_rounding="none"`, and configured `vig_paid_on_win`.
 - Interactive player creation with `NullStrategy`.
 - A reviewed constructor/projection adapter for a limited supported bet subset.
 - Detached state projection and conservative available-action computation.
@@ -173,13 +179,14 @@ rules in Bubble Craps.
 ## Out Of Scope
 
 - Any source change, local patch, or unreleased API in the `crapssim` repository.
-- Custom table-setting overrides or casino profiles.
+- Arbitrary table-setting overrides or casino profiles beyond the approved vig policies.
 - Per-bet roll outcomes, settlement reasons, payout attribution, or an engine event journal.
 - Specific engine rejection reasons or transactional command guarantees.
 - The Interblock Section 3.2 Set Bets On/Off command, which is assigned to Milestone 6 with its
   published engine prerequisite and cross-layer integration.
 - Serialization, deserialization, metadata, migrations, or file-version checks.
-- Snapshot values, undo stacks, restoration, or undo determinism.
+- Snapshot values, undo-stack runtime behavior, restoration, or undo determinism. The existing
+  future type declaration remains in the shell.
 - Functional `GameSession.save`, `GameSession.load`, or `GameSession.undo` behavior.
 - Controller forwarding, Qt signals, GUI behavior, asset loading, logging, and bootstrap wiring.
 - Replay, strategy playback, auto-play, developer tools, or Easy Craps support.
@@ -196,7 +203,8 @@ Tasks:
 - Apply the resolved money, immutability, generic-outcome, aggregate-history, and snapshot decisions.
 - Remove unresolved `object` placeholders from Milestone 2 values.
 - Define immutable command result values and generic statuses.
-- Remove custom table settings and `casino_profile` from Milestone 2 configuration.
+- Replace broad `TableSettings` and `casino_profile` configuration with the explicit
+  `vig_paid_on_win` session option, defaulting to true.
 - Reconcile existing `GameSession` stubs with supported, rejected, and deferred behavior.
 - Ensure documentation makes no per-bet settlement or transactional rollback promise.
 
@@ -226,11 +234,14 @@ Goal: construct a valid engine table from minimal immutable session settings.
 Tasks:
 
 - Validate a finite positive starting bankroll.
-- Accept only explicit `classic` and `crapless` ruleset identifiers.
+- Represent supported rulesets with a string-valued enum containing only `classic` and `crapless`.
+- Parse external identifiers through that enum and reject unknown values without silent fallback.
 - Construct the corresponding public `crapssim.rules` object.
-- Create a `Table` without mutating its default settings.
+- Validate `vig_paid_on_win` as a boolean session option defaulting to true.
+- Create a `Table` from engine defaults, then set `vig_rounding` to `"none"` and
+  `vig_paid_on_win` to the configured value.
 - Create exactly one player with `NullStrategy`.
-- Do not add custom table settings, casino profiles, or silent ruleset fallback.
+- Do not add arbitrary table settings, casino profiles, or silent ruleset fallback.
 
 Deliverable: validated minimal configuration and tested engine-default table construction.
 
@@ -299,7 +310,8 @@ Tasks:
 - Add an initializer accepting minimal configuration, an optional deterministic dice seam, and an
   injectable clock.
 - Own one `Table`, one `Player`, one history owner, one statistics owner, and immutable settings.
-- Do not construct a snapshot or undo stack.
+- Retain the future `undo_stack` type declaration, but do not initialize or use it and do not
+  construct a snapshot.
 - Record initial `NEW_SESSION` and `NEW_SHOOTER` events in that order.
 - Produce initial and post-command detached `GameState` values.
 - Keep production dice random and timestamps UTC-based.
@@ -366,7 +378,8 @@ Tasks:
 
 - Add focused tests for values, configuration, adapter, state, history, statistics, commands, rolls,
   and lifecycle.
-- Verify both rulesets, engine defaults, `NullStrategy`, and deterministic outcomes.
+- Verify both rulesets, engine defaults plus the approved vig policies, `NullStrategy`, and
+  deterministic outcomes.
 - Verify every adapter binding uses public v0.4.1 constructors and attributes.
 - Verify generic rejection and no history/statistics mutation after expected rejection.
 - Verify aggregate event order, shooter lifecycle, statistics, and session reset.
@@ -379,7 +392,8 @@ Deliverable: deterministic tests for every revised acceptance criterion.
 
 ## Required Test Scenarios
 
-- New Classic and Crapless sessions using engine defaults.
+- New Classic and Crapless sessions using fixed unrounded vig and both supported
+  `vig_paid_on_win` values.
 - Unknown ruleset, non-finite money, non-positive bankroll, and malformed request rejection.
 - One `NullStrategy` player and no automatic strategy bets during a roll.
 - Approved adapter construction and detached projection for every supported binding.
@@ -401,7 +415,8 @@ Deliverable: deterministic tests for every revised acceptance criterion.
 ## Acceptance Criteria
 
 - `GameSession` constructs one-player Classic or Crapless sessions from minimal explicit settings.
-- Tables retain the published engine's defaults without Bubble Craps overrides.
+- Tables retain published engine defaults except for `vig_rounding="none"` and the configured
+  `vig_paid_on_win` policy.
 - The interactive player uses `NullStrategy` and receives no automatic strategy bets.
 - The adapter's approved subset uses public v0.4.1 bindings only.
 - Published state, history, statistics, and bet projections are immutable and detached.
@@ -417,7 +432,8 @@ Deliverable: deterministic tests for every revised acceptance criterion.
 - New-session reconstruction leaks no prior state or identifiers.
 - `set_bets_on_or_off`, unsupported convenience commands, undo, save, and load return
   `NOT_IMPLEMENTED`.
-- No snapshot or undo stack is created in Milestone 2.
+- No snapshot or runtime undo stack is created or used in Milestone 2; only the future type
+  declaration is retained.
 - No Milestone 2 change is required in the `crapssim` repository.
 - Session modules and tests contain zero Qt imports and duplicate no engine rules.
 - Ruff formatting, Ruff lint, strict mypy, pytest, and `pip check` all pass.
@@ -429,7 +445,8 @@ Deliverable: deterministic tests for every revised acceptance criterion.
 - Inspect every `crapssim` binding for public-only use.
 - Verify no winning-number, losing-number, payout, point, removability, or working-state rule was
   copied into Bubble Craps.
-- Verify tables retain engine defaults and players use `NullStrategy`.
+- Verify tables retain engine defaults except for the approved vig policies and players use
+  `NullStrategy`.
 - Verify deterministic tests drive rolls through one `TableUpdate.run` call.
 - Verify roll records remain aggregate and never classify per-bet layout differences.
 - Verify state cannot mutate live session containers or engine instances.
@@ -475,8 +492,8 @@ Risk: Frozen state leaks mutable engine or session ownership.
 
 Risk: Milestone 2 absorbs engine, undo, or persistence work.
 
-- Mitigation: Require no engine changes, create no snapshots or undo stack, and keep deferred
-  commands explicit.
+- Mitigation: Require no engine changes, create no snapshots, leave the declared undo stack
+  uninitialized and unused, and keep deferred commands explicit.
 
 ## Milestone 2 Exit Decision
 

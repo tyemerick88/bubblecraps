@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Self
-
 from crapssim.table import Player, Table
 
+from bubblecraps.session.commands import CommandResult, CommandStatus
 from bubblecraps.session.history import SessionHistory
 from bubblecraps.session.settings import SessionConfiguration
 from bubblecraps.session.snapshot import SessionSnapshot
@@ -21,6 +20,7 @@ class GameSession:
     history: SessionHistory
     statistics: SessionStatistics
     settings: SessionConfiguration
+    # Milestone 3 initializes and owns snapshot capture and restoration.
     undo_stack: list[SessionSnapshot]
 
     @property
@@ -28,34 +28,50 @@ class GameSession:
         """Return the immutable GUI-facing representation of the session."""
         raise NotImplementedError
 
-    def roll(self) -> None:
+    def roll(self) -> CommandResult:
         """Placeholder for advancing the session by one roll."""
+        raise NotImplementedError
 
-    def undo(self) -> None:
-        """Placeholder for restoring the previous session snapshot."""
+    def undo(self) -> CommandResult:
+        """Report that undo is deferred until Milestone 3."""
+        return CommandResult(CommandStatus.NOT_IMPLEMENTED)
 
-    def place_bet(self) -> None:
+    def place_bet(self) -> CommandResult:
         """Placeholder for placing a bet through the session."""
+        raise NotImplementedError
 
-    def repeat_last_bet(self) -> None:
+    def remove_bet(self) -> CommandResult:
+        """Placeholder for removing a bet through the session."""
+        raise NotImplementedError
+
+    def repeat_last_bet(self) -> CommandResult:
         """Placeholder for repeating the most recently placed bet."""
+        raise NotImplementedError
 
-    def double_bet(self) -> None:
+    def double_bet(self) -> CommandResult:
         """Placeholder for doubling the applicable active bets."""
+        raise NotImplementedError
 
-    def set_bets_on_or_off(self) -> None:
-        """Placeholder for toggling the working state of active bets."""
+    def set_bets_on_or_off(self, working: bool) -> CommandResult:
+        """Report that Interblock working-state control is deferred."""
+        del working
+        return CommandResult(CommandStatus.NOT_IMPLEMENTED)
 
-    def clear_all_bets(self) -> None:
+    def clear_all_bets(self) -> CommandResult:
         """Placeholder for clearing the active bets from the table."""
+        raise NotImplementedError
 
-    def new_session(self) -> None:
+    def new_session(self) -> CommandResult:
         """Placeholder for resetting this game session."""
+        raise NotImplementedError
 
-    def save(self, filename: str) -> None:
-        """Placeholder for saving this session to ``filename``."""
+    def save(self, filename: str) -> CommandResult:
+        """Report that session persistence is deferred until Milestone 3."""
+        del filename
+        return CommandResult(CommandStatus.NOT_IMPLEMENTED)
 
     @classmethod
-    def load(cls, filename: str) -> Self:
-        """Placeholder for loading a session from ``filename``."""
-        raise NotImplementedError
+    def load(cls, filename: str) -> CommandResult:
+        """Report that session loading is deferred until Milestone 3."""
+        del cls, filename
+        return CommandResult(CommandStatus.NOT_IMPLEMENTED)

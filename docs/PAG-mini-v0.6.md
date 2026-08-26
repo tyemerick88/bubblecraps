@@ -279,7 +279,7 @@ Owns:
 - History
 - Statistics
 - Settings
-- Undo stack (Milestone 3, not constructed in Milestone 2)
+- Undo-stack type declaration; Milestone 3 initializes and uses it
 
 Produces:
 - GameState
@@ -296,7 +296,7 @@ class GameSession:
     history: SessionHistory
     statistics: SessionStatistics
     settings: SessionConfiguation
-    # Added in Milestone 3:
+    # Retained as a future contract; initialized and used in Milestone 3.
     undo_stack: list[SessionSnapshot]
 
     @property
@@ -388,8 +388,9 @@ accept it. Milestone 2 keeps `can_set_bets_on_or_off`, `can_undo`, `can_save`, a
 
 ### SessionSnapshot
 
-> Milestone ownership: This is a Milestone 3 contract. Milestone 2 does not create
-> `SessionSnapshot` values, capture snapshots, or maintain an undo stack.
+> Milestone ownership: This is a Milestone 3 runtime contract. The Milestone 1 skeleton retains the
+> `undo_stack` type declaration, but Milestone 2 does not initialize it, create `SessionSnapshot`
+> values, capture snapshots, read or populate the stack, or restore state from it.
 
 A `SessionSnapshot` is an immutable checkpoint of the application's session state.
 
@@ -438,17 +439,24 @@ without treating a frozen reference to a mutable `Player` or `Table` as immutabl
 
 ### SessionConfiguation
 ```python
+class Ruleset(StrEnum):
+    CLASSIC = "classic"
+    CRAPLESS = "crapless"
+
+
 @dataclass(frozen=True)
 class SessionConfiguration:
-    ruleset: str
-    table_settings: TableSettings # matches crapssim class
-    casino_profile: str | None
+    ruleset: Ruleset
     starting_bankroll: float
+    vig_paid_on_win: bool = True
 ```
 
-Milestone 2 accepts only `classic` and `crapless`, requires a finite positive bankroll, and constructs
-the engine with its committed defaults. Custom `TableSettings` overrides and `casino_profile` are not
-part of the Milestone 2 configuration contract.
+Milestone 2 accepts only `classic` and `crapless`, requires a finite positive bankroll, and uses
+`vig_paid_on_win` as an application-owned session option. The engine table is constructed from its
+committed defaults, then Bubble Craps applies the fixed `vig_rounding="none"` policy and the configured
+`vig_paid_on_win` value. The complete mutable `TableSettings` object and `casino_profile` are not part
+of the Milestone 2 configuration contract. External ruleset strings are parsed with `Ruleset(value)`;
+unknown values are rejected rather than silently falling back to another ruleset.
 
 ------------------------------------------------------------------------
 
@@ -637,8 +645,8 @@ Animations never modify game state.
 
 ## Undo Flow
 
-> Milestone ownership: Undo is implemented in Milestone 3. Milestone 2 returns `NOT_IMPLEMENTED` and
-> does not create snapshots or an undo stack.
+> Milestone ownership: Undo is implemented in Milestone 3. Milestone 2 returns `NOT_IMPLEMENTED`,
+> retains only the future `undo_stack` type declaration, and does not initialize or use the stack.
 
 Once Milestone 3 is implemented, every user action that modifies the session should create a
 snapshot **before** any changes are made.
@@ -740,7 +748,7 @@ Extension with be `.bcs` rather than `.json`
 | `file_format` | `string` | Fixed identifier (e.g. `"bubble-craps-session"`) | Identifies the file type and allows the application to verify that the file is a valid Bubble Craps session file. |
 | `file_version` | `integer` | Positive integer | Version of the save file format. Used to support backward compatibility and data migration as the format evolves. |
 | `application_version` | `string` | Semantic Versioning (e.g. `"0.5.0"`) | Version of the Bubble Craps application that created or last saved the session. Primarily used for diagnostics and troubleshooting. |
-| `ruleset` | `string` | Registered ruleset identifier (e.g. `"classic"`, `"crapless"`, `"high-point"`) | Specifies which `crapssim` ruleset should be used when restoring the session. This allows the correct game engine to be selected before deserializing session data. |
+| `ruleset` | `string` | Supported `Ruleset` value (`"classic"` or `"crapless"`) | Specifies which `crapssim` ruleset should be used when restoring the session. This allows the correct game engine to be selected before deserializing session data. |
 | `session_id` | `string` | UUID v4 | Globally unique identifier for the session. Remains constant for the lifetime of the session, even after multiple saves. |
 | `created_timestamp` | `string` | ISO 8601 UTC (`YYYY-MM-DDTHH:MM:SSZ`) | Timestamp indicating when the session was originally created. This value never changes after the initial save. |
 | `modified_timestamp` | `string` | ISO 8601 UTC (`YYYY-MM-DDTHH:MM:SSZ`) | Timestamp indicating when the session was most recently saved. Updated every time the session is written to disk. |

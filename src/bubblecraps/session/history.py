@@ -7,7 +7,7 @@ from datetime import datetime
 from enum import Enum
 
 
-@dataclass(slots=True)
+@dataclass(frozen=True, slots=True)
 class RollRecord:
     """Represent one resolved dice roll."""
 
@@ -18,18 +18,17 @@ class RollRecord:
     shooter_number: int
     point_before: int | None
     point_after: int | None
-    bankroll_delta: int
-    bet_changes: list[object]
+    total_player_cash_delta: float
 
 
-@dataclass(slots=True)
+@dataclass(frozen=True, slots=True)
 class ShooterRecord:
     """Represent one shooter's session record."""
 
     shooter_number: int
     rolls: int
-    point_numbers_made: list[int]
-    profit: int
+    point_numbers_made: tuple[int, ...]
+    profit: float
 
 
 class SessionEventType(Enum):

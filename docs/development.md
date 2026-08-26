@@ -21,16 +21,23 @@ advisory local default; contributors may use another 3.14 patch release. Always 
 ## Version Policy
 
 Bubble Craps follows [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html). During initial
-milestone development, completed milestones use this prerelease format:
+milestone development, accepted work-package checkpoints use this prerelease format:
+
+```text
+0.0.0-alpha.<milestone_number>.<work_package_number>.<completion_date>
+```
+
+The milestone and work-package numbers are unpadded positive integers, and the completion date uses
+`YYYY-MM-DD`. A work-package version is assigned only after its implementation and focused quality
+gates pass. A completed milestone omits the work-package identifier and is assigned only after all
+milestone acceptance criteria pass:
 
 ```text
 0.0.0-alpha.<milestone_number>.<completion_date>
 ```
 
-The milestone number is an unpadded positive integer, and the completion date uses `YYYY-MM-DD`.
-Both are dot-separated prerelease identifiers following the `alpha` label. The package version is
-updated only after the milestone acceptance criteria pass. Until the first planned `0.1.0` release,
-the public API remains unstable and may change between milestone versions.
+Until the first planned `0.1.0` release, the public API remains unstable and may change between
+checkpoint versions.
 
 The canonical runtime version is `bubblecraps.__version__`. Documentation, tests, release tags, and
 future package metadata must agree with that value. Git tags may use the conventional `v` prefix,

@@ -38,7 +38,7 @@ class GameState:
 
     phase: GamePhase
     actions: AvailableActions
-    bankroll: int
+    bankroll: float
     point: int | None
     puck_on: bool
     bets: list[Bet]

@@ -5,6 +5,12 @@
 > Living architecture document for the Bubble Craps GUI application.
 > Document is refered to as Project Architecture Guide (aka "PAG").
 
+> Milestone sequencing note: The value contracts below describe the target domain architecture.
+> Milestone 2 work is divided by the accepted
+> [Milestone 2 plan](milestones/milestone-2-domain-core-completion.md). Persistence and undo begin in
+> Milestone 3, Qt integration begins in Milestone 4, and Interblock Set Bets On/Off is deferred to
+> Milestone 6 pending a published engine capability.
+
 ------------------------------------------------------------------------
 
 # Project Overview
@@ -283,19 +289,29 @@ class GameSession:
     history: SessionHistory
     statistics: SessionStatistics
     settings: SessionConfiguation
+    # Retained as a future contract; initialized and used in Milestone 3.
     undo_stack: list[SessionSnapshot]
 
     @property
     def state(self) -> GameState: ...
 
-    def roll(self): ...
-    def undo(self): ...
-    def replace_previous_bets(self): ...
-    def new_session(self): ...
-    def save(self, filename: str): ...
+    def roll(self) -> CommandResult: ...
+    def place_bet(self, request: BetRequest) -> CommandResult: ...
+    def remove_bet(self, bet_id: str) -> CommandResult: ...
+    def repeat_last_bet(self) -> CommandResult: ...
+    def double_bet(self) -> CommandResult: ...
+    def clear_all_bets(self) -> CommandResult: ...
+    def set_bets_on_or_off(self, working: bool) -> CommandResult: ...
+    def new_session(self) -> CommandResult: ...
+    def undo(self) -> CommandResult: ...
+    def save(self, filename: str) -> CommandResult: ...
     @classmethod
     def load(cls, filename: str): ...
 ```
+
+Milestone 2 command outcomes are generic: `ACCEPTED`, `REJECTED`, and `NOT_IMPLEMENTED`. The engine
+does not provide authoritative rejection reasons. Undo and persistence return `NOT_IMPLEMENTED` until
+Milestone 3; Set Bets On/Off does so until Milestone 6.
 
 ------------------------------------------------------------------------
 
@@ -306,18 +322,20 @@ class GameSession:
 class GameState:
     phase: GamePhase
     actions: AvailableActions
-    bankroll: int
+    bankroll: float
     point: int | None
     puck_on: bool
-    bets: list[Bet]
+    bets: tuple[BetState, ...]
     die1: int | None
     die2: int | None
     last_roll: RollRecord | None
-    statistics: SessionStatistics
-    history: SessionHistory
+    statistics: SessionStatisticsState
+    history: SessionHistoryState
 ```
 
-No Qt types belong in GameState.
+No Qt types, mutable engine objects, or mutable session containers belong in `GameState`. WP2.2
+implements this recursively immutable state model after WP2.4 approves the public-only bet projection
+contract.
 
 ------------------------------------------------------------------------
 
@@ -342,11 +360,16 @@ class AvailableActions:
     can_roll: bool
     can_place_bets: bool
     can_remove_bets: bool
-    can_replace_previous_bets: bool
+    can_repeat_last_bet: bool
+    can_double_bets: bool
+    can_clear_bets: bool
+    can_set_bets_on_or_off: bool
     can_undo: bool
     can_save: bool
     can_load: bool
 ```
+
+Milestone 2 keeps `can_set_bets_on_or_off`, `can_undo`, `can_save`, and `can_load` false.
 
 ## Design Motivation
 
@@ -367,6 +390,9 @@ Separating these concepts keeps gameplay rules inside GameSession while allowing
 ------------------------------------------------------------------------
 
 # SessionSnapshot
+
+> Milestone ownership: This is a Milestone 3 runtime contract. The shell retains the `undo_stack`
+> annotation, but Milestone 2 does not initialize or use it and does not create snapshots.
 
 A `SessionSnapshot` is an immutable checkpoint of the application's session state.
 
@@ -401,12 +427,14 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class SessionSnapshot:
     """Immutable checkpoint of a GameSession."""
-    player: Player
-    table: Table
-    history: SessionHistory
-    statistics: SessionStatistics
+    engine_state: EngineSnapshot
+    history: SessionHistoryState
+    statistics: SessionStatisticsState
     settings: SessionConfiguration
 ```
+
+The Milestone 3 representation must restore engine state deterministically; freezing references to a
+mutable `Player` or `Table` does not make a snapshot immutable.
 
 ---
 
@@ -426,6 +454,8 @@ Although both `SessionSnapshot` and `GameState` are immutable, they serve differ
 ---
 
 ## Undo Flow
+
+> This flow begins in Milestone 3. Milestone 2 returns `NOT_IMPLEMENTED` for undo.
 
 Every user action that modifies the session should create a snapshot **before** any changes are made.
 
@@ -493,7 +523,7 @@ Extension with be `.bcs` rather than `.json`
 | `file_format` | `string` | Fixed identifier (e.g. `"bubble-craps-session"`) | Identifies the file type and allows the application to verify that the file is a valid Bubble Craps session file. |
 | `file_version` | `integer` | Positive integer | Version of the save file format. Used to support backward compatibility and data migration as the format evolves. |
 | `application_version` | `string` | Semantic Versioning (e.g. `"0.5.0"`) | Version of the Bubble Craps application that created or last saved the session. Primarily used for diagnostics and troubleshooting. |
-| `ruleset` | `string` | Registered ruleset identifier (e.g. `"classic"`, `"crapless"`, `"high-point"`) | Specifies which `crapssim` ruleset should be used when restoring the session. This allows the correct game engine to be selected before deserializing session data. |
+| `ruleset` | `string` | Supported `Ruleset` value (`"classic"` or `"crapless"`) | Specifies which `crapssim` ruleset should be used when restoring the session. This allows the correct game engine to be selected before deserializing session data. |
 | `session_id` | `string` | UUID v4 | Globally unique identifier for the session. Remains constant for the lifetime of the session, even after multiple saves. |
 | `created_timestamp` | `string` | ISO 8601 UTC (`YYYY-MM-DDTHH:MM:SSZ`) | Timestamp indicating when the session was originally created. This value never changes after the initial save. |
 | `modified_timestamp` | `string` | ISO 8601 UTC (`YYYY-MM-DDTHH:MM:SSZ`) | Timestamp indicating when the session was most recently saved. Updated every time the session is written to disk. |
@@ -532,13 +562,20 @@ Keeping these responsibilities separate results in a cleaner architecture and en
 
 ## SessionConfiguation
 ```python
+class Ruleset(StrEnum):
+    CLASSIC = "classic"
+    CRAPLESS = "crapless"
+
+
 @dataclass(frozen=True)
 class SessionConfiguration:
-    ruleset: str
-    table_settings: TableSettings # matches crapssim class
-    casino_profile: str | None
-    starting_bankroll: int
+    ruleset: Ruleset
+    starting_bankroll: float
+    vig_paid_on_win: bool = True
 ```
+
+External identifiers are parsed with `Ruleset(value)` so unsupported rulesets are rejected. Bubble
+Craps uses fixed unrounded vig and does not expose the complete mutable engine `TableSettings` object.
 
 ## SessionHistory
 ``` python
@@ -550,7 +587,7 @@ class SessionHistory:
 
 ## RollRecord
 ``` python
-@dataclass
+@dataclass(frozen=True)
 class RollRecord:
     die1: int
     die2: int
@@ -559,17 +596,22 @@ class RollRecord:
     shooter_number: int
     point_before: int | None
     point_after: int | None
-    bankroll_delta: int
-    bet_changes: list[BetChange]
+    total_player_cash_delta: float
+    bets_before: tuple[BetState, ...]
+    bets_after: tuple[BetState, ...]
 ```
+
+The layouts are aggregate observations. They must not be interpreted as authoritative per-bet wins,
+losses, pushes, moves, removal reasons, payouts, or attributable cash changes because
+`crapssim==0.4.1` publishes no per-bet settlement journal.
 ## ShooterRecord
 ``` python
-@dataclass
+@dataclass(frozen=True)
 class ShooterRecord:
     shooter_number: int
     rolls: int
-    point_numbers_made: list[int]
-    profit: int
+    point_numbers_made: tuple[int, ...]
+    profit: float
 ```
 
 ## SessionEvent
@@ -665,12 +707,11 @@ SessionEvent
 
 ------------------------------------------------------------------------
 
-# Future Consideration: BetState
+# BetState
 
-The first implementation exposes crapssim Bet objects directly.
-
-A future BetState may provide a GUI-friendly representation if rendering
-logic becomes repetitive.
+`BetState` is a detached, recursively immutable Bubble Craps projection built only from approved
+public engine attributes. WP2.4 defines its fields and constructor mappings. Runtime state never
+publishes live `crapssim.Bet` objects.
 
 ------------------------------------------------------------------------
 
@@ -725,13 +766,13 @@ SessionController.roll()
  ↓
 GameSession.roll()
  ↓
-crapssim.Table.roll()
+crapssim.TableUpdate.run() exactly once
  ↓
-Update Player
+Observe public engine state
  ↓
-Update History
+Append one aggregate RollRecord
  ↓
-Update Statistics
+Update SessionStatistics exactly once
  ↓
 Produce GameState
  ↓
