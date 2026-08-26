@@ -25,15 +25,11 @@ When `crapssim` differs from the intended Interblock behavior, fix or extend `cr
 that change here. Bubble Craps must not compensate by implementing a second rules engine in its
 session, controller, or GUI code.
 
-Until crapssim v0.5.0 is released, the required engine is the sibling checkout at `../crapssim`. Its
-accepted baseline commit is stored in `.crapssim-revision`; `requirements.txt` installs that checkout
-editably so unreleased Crapless support is available and Bubble Craps v0.1.0 development can expose
-any remaining engine changes before the engine release is requested.
-
-The source mechanism is temporary, but engine ownership is permanent. After Bubble Craps v0.1.0 is
-feature-complete, request crapssim v0.5.0, replace the editable checkout with the exact published
-dependency, and pass the integration suite before releasing Bubble Craps v0.1.0. This transition
-does not permit game rules to move into Bubble Craps.
+The required engine is the exact published `crapssim==0.4.1` package. Bubble Craps will use this
+version going forward unless an engine change is strictly necessary. Any necessary engine change
+must be made and released by the `crapssim` project, then consumed here as a reviewed exact-version
+dependency update that passes the complete quality and integration suite. This release policy does
+not permit game rules to move into Bubble Craps.
 
 ## Runtime Layers
 

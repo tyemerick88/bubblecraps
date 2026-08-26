@@ -23,7 +23,7 @@ Milestone 0 established:
 - The authoritative dependency direction and runtime ownership contract.
 - The rule that game behavior belongs in `crapssim`, not Bubble Craps.
 - Python, dependency, formatting, linting, typing, and test baselines.
-- The temporary pinned sibling-checkout workflow for unreleased `crapssim` support.
+- The exact published `crapssim==0.4.1` dependency and engine ownership policy.
 
 Milestone 1 established:
 
@@ -482,7 +482,7 @@ Reviewer checklist:
 - Run `python tools/check.py`.
 - Run `python -m pytest -v` and inspect all domain tests discovered.
 - Verify `tests/test_architecture.py` still passes.
-- Verify the sibling `crapssim` checkout matches `.crapssim-revision` and is clean.
+- Verify the installed engine is the exact published `crapssim==0.4.1` package.
 
 ## Deliverables Summary
 

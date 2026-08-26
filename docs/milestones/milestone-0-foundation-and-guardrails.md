@@ -171,11 +171,10 @@ Risk: Setup drift across machines.
 - Environment: macOS with Python 3.14.6 in a fresh project virtual environment.
 - Clean setup evidence: a separate temporary virtual environment installed `requirements-dev.txt`
   from scratch and passed `python tools/check.py`.
-- Engine source: local sibling checkout at commit
+- Engine source at signoff: local sibling checkout at commit
   `56e26a8794a63bb5ec4a4e7efcca727b0febf7d2`.
-- Engine source lifecycle: the sibling checkout remains in use while Bubble Craps v0.1.0 is
-  completed; the release candidate will switch to published crapssim v0.5.0 before Bubble Craps
-  v0.1.0 is released.
+- Current engine source: this historical setup was superseded by the exact published
+  `crapssim==0.4.1` dependency; see the development policy.
 - Architecture and dependency policy: [docs/architecture-contract.md](../architecture-contract.md).
 - Toolchain, quality, and handoff policy: [docs/development.md](../development.md).
 - Milestone 1 handoff: package layout and module ownership are reconciled with the accepted

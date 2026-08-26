@@ -115,14 +115,14 @@ Scope:
 - Run regression across domain, persistence, controller, and GUI shell.
 - Perform manual authenticity review against PAG goals.
 - Freeze initial file format and configuration defaults.
-- Finalize the Bubble Craps v0.1.0 engine contract, request crapssim v0.5.0, and replace the temporary
-	sibling checkout with the exact published dependency.
+- Confirm the exact published `crapssim==0.4.1` dependency still satisfies the finalized Bubble Craps
+  v0.1.0 engine contract; upgrade only if an engine change is strictly necessary.
 - Record known gaps and post-release priorities.
 
 Exit Criteria:
 - Critical tests are passing.
-- The published crapssim v0.5.0 package passes the full Bubble Craps integration suite.
-- Bubble Craps v0.1.0 no longer requires a sibling crapssim checkout.
+- The exact published crapssim package passes the full Bubble Craps integration suite.
+- Bubble Craps v0.1.0 requires no local or VCS crapssim checkout.
 - Remaining issues are triaged with severity and follow-up plans.
 
 ## Parallel Workstreams

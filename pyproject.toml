@@ -47,7 +47,6 @@ docstring-code-format = true
 quote-style = "double"
 
 [tool.mypy]
-mypy_path = "../crapssim"
 python_version = "3.14"
 strict = true
 warn_unreachable = true
