@@ -1,556 +1,508 @@
 # Milestone 2: Domain Core Completion
 
-- Status: Draft for review
+- Status: Accepted, awaiting implementation
 - Roadmap source: [docs/roadmap.md](../roadmap.md)
 - Primary architecture reference: [docs/PAG-mini-v0.6.md](../PAG-mini-v0.6.md)
 - Supporting design reference: [docs/PAG-v0.6.md](../PAG-v0.6.md)
 - Depends on: [Milestone 1](milestone-1-architecture-skeleton.md)
+- Engine baseline: exact published `crapssim==0.4.1`
 
 ## Milestone Intent
 
-Milestone 2 turns the pure-Python session skeleton from Milestone 1 into a tested domain core. It
-implements session state, history, statistics, configuration, and `GameSession` orchestration while
-continuing to use `crapssim` as the sole authority for rules, bet legality, dice resolution, point
-transitions, payouts, and bankroll effects.
+Milestone 2 turns the pure-Python session skeleton from Milestone 1 into a tested domain core while
+remaining within the public behavior of the published `crapssim==0.4.1` package. It implements
+session construction, detached state, aggregate history, statistics, supported player commands, and
+single-roll orchestration. `crapssim` remains the sole authority for rules, bet legality, dice
+resolution, point transitions, payouts, and bankroll effects.
 
 The milestone ends with a deterministic, headless game session that can be exercised entirely from
-Python. It does not implement persistence, reliable undo, Qt controller behavior, or GUI rendering.
+Python. It does not require a `crapssim` source change, an unreleased sibling-checkout API, private
+engine members, persistence, undo, Qt controller behavior, or GUI rendering.
 
 ## Completed Foundation
 
-Milestone 0 established:
+Milestone 0 established the dependency direction, engine ownership policy, quality baselines, and
+exact published `crapssim==0.4.1` dependency. Milestone 1 established the runtime package skeleton,
+session signatures, controller and GUI shells, infrastructure placeholders, and automated boundary
+checks. Milestone 2 must preserve those boundaries and keep the architecture tests passing.
 
-- The authoritative dependency direction and runtime ownership contract.
-- The rule that game behavior belongs in `crapssim`, not Bubble Craps.
-- Python, dependency, formatting, linting, typing, and test baselines.
-- The exact published `crapssim==0.4.1` dependency and engine ownership policy.
+## Engine Compatibility Contract
 
-Milestone 1 established:
+Milestone 2 targets the installed, published `crapssim==0.4.1` API as it exists:
 
-- Importable `application`, `assets`, `controller`, `gui`, and `session` packages.
-- Session model and orchestration signatures under `src/bubblecraps/session/`.
-- A Qt-aware controller shell and GUI shell without behavioral wiring.
-- Application configuration, logging, session persistence, and asset ownership placeholders.
-- Automated dependency-boundary, import-cycle, public-contract, and engine-source checks.
-- A tracked physical asset hierarchy and updated repository documentation.
-
-Milestone 2 builds on those boundaries. It must not move behavior into another layer or weaken the
-Milestone 0 architecture tests.
+- No Milestone 2 task modifies `crapssim` or depends on an uncommitted sibling checkout.
+- Integration uses public classes, constructors, methods, and attributes only.
+- Bubble Craps does not inspect private placement keys or other underscore-prefixed engine members.
+- Bubble Craps does not use reflection, monkeypatching, engine subclassing, or copied engine rules to
+  fill API gaps.
+- Tables use engine defaults. Custom `Table.settings` overrides and a casino-profile abstraction are
+  deferred until a later milestone proves they are required and supportable.
+- `Player.add_bet` and `Player.remove_bet` silently accept or reject attempts and return `None`.
+  Bubble Craps may observe whether public state changed, but it must not invent a specific engine
+  rejection reason.
+- `TableUpdate.run` mutates the table but does not publish an authoritative per-bet settlement
+  journal. Bubble Craps records aggregate roll observations and must not infer that a changed or
+  missing bet won, lost, pushed, moved, or was otherwise resolved.
+- Expected rejections must leave observed domain state unchanged. Milestone 2 does not promise
+  transactional rollback after an unexpected engine exception.
+- Missing safe public support produces a stable `NOT_IMPLEMENTED` domain result; it is not a reason
+  to reach into private engine behavior or duplicate rules.
 
 ## What Will Be Accomplished
 
-By the end of Milestone 2, the project will have:
-
-- A constructible `GameSession` that owns one `crapssim.Table` and one `crapssim.Player`.
-- Explicit ruleset selection and validated immutable session configuration.
-- A strategy-neutral interactive player that does not place automatic simulation bets.
+- A constructible `GameSession` owning one `crapssim.Table` and one `crapssim.Player`.
+- Explicit Classic or Crapless ruleset selection with engine-default table settings.
+- A strategy-neutral interactive player using `crapssim.strategy.tools.NullStrategy`.
+- A reviewed adapter for a deliberately limited set of bet requests and detached projections.
 - Deterministic and random single-roll orchestration through `crapssim.TableUpdate`.
-- Immutable GUI-facing state values and centrally computed available actions.
-- Complete roll, shooter, event, and bet-change history models.
-- A defined cumulative session-statistics model updated from session outcomes.
-- Core bet command orchestration that delegates legality and bankroll effects to `crapssim`.
-- Domain tests covering successful commands, rejected commands, transitions, history, statistics,
-  ruleset behavior, and deterministic roll sequences.
+- Recursively immutable GUI-facing state and conservative available actions.
+- Aggregate roll, shooter, event, and player-command history.
+- Cumulative session statistics derived from observed engine transitions.
+- Best-effort supported bet commands and stable generic command outcomes.
+- Domain tests for supported commands, expected rejection, transitions, aggregate history,
+  statistics, rulesets, and deterministic roll sequences.
 
 ## Architecture Invariants
-
-The following rules are non-negotiable:
 
 - `src/bubblecraps/session/` contains no PySide6, controller, GUI, application, or asset imports.
 - `GameSession` is the only Bubble Craps runtime class that mutates live `crapssim` objects.
 - Bubble Craps does not reproduce winning numbers, losing numbers, payout ratios, point rules, bet
-  legality, removability, or bankroll calculations.
+  legality, removability, working behavior, or bankroll calculations.
 - `GameState` and `AvailableActions` are produced by `GameSession`; callers do not infer legality.
+- Published domain values contain no live engine objects or mutable session containers.
 - Domain tests use explicit dice outcomes or seeds and do not depend on uncontrolled randomness.
-- No controller signal behavior or GUI behavior is used as evidence of a domain transition.
+- No controller signal or GUI behavior is evidence of a domain transition.
 - Persistence, logging, and application configuration remain separate from gameplay history.
 
-## Decisions Required Before Implementation
+## Resolved Domain Decisions
 
-The PAG and current engine leave several contracts ambiguous. These decisions should be reviewed and
-recorded before implementation begins.
+### Money
 
-### Decision 1: Monetary Type
-
-Current conflict:
-
-- The PAG types bankroll and deltas as `int`.
-- `crapssim.Player.bankroll`, bet amounts, vigs, and payouts are `float` and may produce fractional
-  values.
-
-Proposed decision:
-
-- Use `float` for bankroll, wager amounts, bankroll deltas, shooter profit, and session profit inside
-  the domain model.
+- Use finite `float` values for bankroll, wagers, cash deltas, shooter profit, and session profit.
+- Reject non-finite values and require a positive starting bankroll and positive wager amount.
 - Do not truncate engine values with `int(...)`.
-- Formatting and currency display remain GUI responsibilities.
-- Add deterministic tests using values with exact expected payouts and `pytest.approx` where binary
-  floating-point comparison requires it.
-- Update the PAG document to reflect this fix after implemetation.
+- Use exact assertions where practical and `pytest.approx` at floating-point integration boundaries.
 
-Approval impact:
+### Immutable Published State
 
-- `GameState.bankroll`, `RollRecord.bankroll_delta`, `ShooterRecord.profit`, and
-  `SessionConfiguration.starting_bankroll` change from `int` to `float`.
+- `GameState` is a recursively immutable, detached projection rather than a view of live session or
+  engine containers.
+- Published collections use tuples and published mappings use an immutable representation.
+- Bet projections contain only reviewed public descriptive fields; they do not expose `Bet`
+  instances or claim rule authority.
+- History and statistics in state are immutable snapshots, not mutable owners.
 
-### Decision 2: Meaning of Immutable `GameState`
+### Generic Command Outcomes
 
-Current conflict:
+- Domain commands return a stable result with `ACCEPTED`, `REJECTED`, or `NOT_IMPLEMENTED` status.
+- `REJECTED` means the attempted public engine operation produced no accepted observable change. It
+  does not claim an engine-defined cause.
+- `NOT_IMPLEMENTED` means Bubble Craps cannot perform the request safely through the approved public
+  v0.4.1 integration surface.
+- Detailed error catalogs are deferred until the engine exposes authoritative rejection information
+  or the product defines reasons independent of engine rules.
 
-- The architecture contract requires immutable GUI-facing state.
-- The PAG currently places mutable `list[Bet]`, `SessionHistory`, and `SessionStatistics` objects in a
-  frozen dataclass.
-- A frozen outer dataclass does not prevent callers from mutating nested engine or list objects.
+### Aggregate History
 
-Proposed decision:
+- A successful roll records dice, point before and after, shooter identity, total-player-cash delta,
+  and detached layout observations.
+- Bet changes caused directly by accepted player commands may be recorded as player-command changes.
+- Before/after layout differences around a roll are observations only. They are never labeled as a
+  per-bet win, loss, push, move, removal reason, payout, or attributable cash delta.
+- Session statistics derive from aggregate observed transitions and do not recalculate outcomes.
 
-- `GameState` must be a detached read-only projection, not a view of live session containers.
-- Use tuples for collections exposed by state.
-- Add a small immutable bet projection in `state.py` only if the required GUI-facing fields can be
-  agreed without duplicating game rules. Do not expose mutable live `Bet` instances as public state.
-- Expose immutable history and statistics snapshots, or immutable copies, rather than the mutable
-  owners used internally by `GameSession`.
-- Update the PAG document to reflect this fix after implemetation.
+### Snapshots And Undo
 
-Alternative requiring explicit acceptance:
+- Milestone 2 does not create `SessionSnapshot` values, capture snapshots, or maintain an undo stack.
+- `undo`, `save`, and `load` return `NOT_IMPLEMENTED`.
+- Snapshot design, restoration, serialization, and deterministic undo belong to Milestone 3.
 
-- Retain live references and define immutability as a caller convention. This is smaller but does not
-  satisfy deep immutability and permits accidental mutation outside `GameSession`.
+## Decisions Required Before Behavioral Implementation
 
-### Decision 3: Statistics Contract
+### Supported Bet Adapter Subset
 
-The PAG says `SessionStatistics` tracks cumulative statistics but does not define its fields.
+Document the exact Bubble Craps request keys, engine constructors, accepted parameters, and detached
+projection fields proposed for Milestone 2. Each binding must be demonstrably implementable with
+public constructors and public attributes. Reject a proposed binding if it requires:
 
-Proposed minimum fields:
+- A private engine member or reflection-based discovery.
+- A copied point, winning-number, losing-number, payout, or legality table.
+- Calling `Bet.get_result` outside the engine roll lifecycle.
+- A Bubble Craps bankroll or wager calculation.
 
-- Total rolls.
-- Total shooters started.
-- Points established.
-- Points made.
-- Seven-outs.
-- Net bankroll change from the configured starting bankroll.
+Bubble Craps request keys are application-owned integration keys, not engine-defined identifiers.
 
-Statistics should be updated from recorded transitions or derived from history. They must not
-recalculate game outcomes independently of `crapssim`.
+### Supported Convenience Commands
 
-### Decision 4: Bet Working Controls
+Evaluate clear, repeat, and double independently against the approved adapter and public v0.4.1
+methods. Implement only a command with a bounded best-effort algorithm and no private or copied-rule
+dependency. Otherwise return `NOT_IMPLEMENTED` and keep its available action false.
 
-The Milestone 1 `GameSession` shell contains `set_bets_on_or_off`, but `crapssim` does not currently
-provide one generic public operation for changing every bet's working state. Some bet classes expose
-an `always_working` override while others intentionally do not.
+### Deferred Set Bets On/Off Command
 
-Proposed decision:
+The Interblock game description, Section 3.2, requires Set Bets On/Off to suppress resolution of
+Place, Lay, Buy, Odds, and Hard Ways bets for the next roll regardless of point state. It also defines
+command exclusions and automatic transitions for Lay, Odds, Place, and Buy bets after point and
+seven-out events.
 
-- Do not implement generic working-state rules in Bubble Craps.
-- Before implementing this command, either add a reviewed public capability to `crapssim` or define
-  an engine-owned protocol identifying supported bets and legal transitions.
-- Keep the Bubble Craps method unavailable until the engine contract exists.
+`crapssim==0.4.1` cannot represent this complete behavior. Its public `always_working` override
+controls come-out behavior for only some bet classes; it does not disable eligible bets during
+point-on rolls and Hard Ways has no corresponding public working-state capability.
 
-### Decision 5: Snapshot Boundary
-
-The roadmap names `SessionSnapshot` in Milestone 2, while Milestone 3 owns snapshot-before-mutation,
-undo restoration, serialization, and reliability.
-
-Proposed decision:
-
-- Milestone 2 finalizes and tests the snapshot value contract only.
-- Do not push snapshots onto an undo stack and do not restore snapshots in Milestone 2.
-- Deep-copy strategy, pre-mutation capture, deterministic restoration, and persistence belong to
-  Milestone 3.
+Therefore, `set_bets_on_or_off` is deferred to Milestone 6. That milestone owns the required
+`crapssim` change and published release, the exact-version dependency update, and complete domain,
+persistence, controller, and GUI integration for Section 3.2. Until then, Milestone 2 must return
+`NOT_IMPLEMENTED`, keep the corresponding available action false, and must not emulate the command
+by removing bets from engine collections, skipping engine update steps, or reproducing lifecycle
+rules in Bubble Craps.
 
 ## In Scope
 
 - Pure-Python domain implementation under `src/bubblecraps/session/`.
-- Integration with the pinned `crapssim` APIs through `GameSession`.
-- Ruleset construction for rulesets supported by the pinned engine.
-- Interactive player creation with `crapssim.strategy.tools.NullStrategy`.
-- State projection and available-action computation.
-- Core bet placement, removal, repeat, double, clear, and supported working-state commands.
-- One-roll orchestration, including deterministic test outcomes.
-- Roll, shooter, event, and bet-change history.
-- Cumulative session statistics.
-- Session reset/new-session behavior that does not perform persistence.
-- Focused domain and engine-contract tests.
+- Integration with the exact published `crapssim==0.4.1` API.
+- Classic and Crapless table construction with committed engine defaults.
+- Interactive player creation with `NullStrategy`.
+- A reviewed constructor/projection adapter for a limited supported bet subset.
+- Detached state projection and conservative available-action computation.
+- Best-effort place and remove commands plus separately approved clear, repeat, and double commands.
+- One-roll orchestration, including explicit deterministic test outcomes.
+- Aggregate roll, shooter, event, and player-command history.
+- Cumulative session statistics and clean new-session behavior.
+- Focused domain and installed-engine contract tests.
 
-## Out of Scope
+## Out Of Scope
 
-- `.bcs` serialization, deserialization, metadata, migrations, or file-version checks.
-- Snapshot-before-every-mutation enforcement, undo restoration, or undo determinism.
-- `GameSession.save`, `GameSession.load`, and functional `GameSession.undo` behavior.
-- SessionController command forwarding, action gating, or Qt signal emission.
-- Application bootstrap wiring, configuration-file I/O, or logging implementation.
-- GUI rendering, animation, user interaction, or asset loading.
-- Session replay, strategy playback, auto-play, or developer tools.
-- New game rules, payout logic, bet-resolution logic, or engine workarounds in Bubble Craps.
-- Easy Craps support unless the pinned `crapssim` revision exposes and tests that ruleset.
+- Any source change, local patch, or unreleased API in the `crapssim` repository.
+- Custom table-setting overrides or casino profiles.
+- Per-bet roll outcomes, settlement reasons, payout attribution, or an engine event journal.
+- Specific engine rejection reasons or transactional command guarantees.
+- The Interblock Section 3.2 Set Bets On/Off command, which is assigned to Milestone 6 with its
+  published engine prerequisite and cross-layer integration.
+- Serialization, deserialization, metadata, migrations, or file-version checks.
+- Snapshot values, undo stacks, restoration, or undo determinism.
+- Functional `GameSession.save`, `GameSession.load`, or `GameSession.undo` behavior.
+- Controller forwarding, Qt signals, GUI behavior, asset loading, logging, and bootstrap wiring.
+- Replay, strategy playback, auto-play, developer tools, or Easy Craps support.
+- New game rules, payout logic, bet-resolution logic, or engine workarounds.
 
 ## Detailed Work Packages
 
 ## WP2.1: Domain Contract Reconciliation
 
-Goal:
-
-- Resolve the type and ownership ambiguities before behavioral code is added.
+Goal: finalize a domain API that states only what v0.4.1 can support safely.
 
 Tasks:
 
-- Approve the monetary type used by domain values.
-- Approve the deep-immutability strategy for `GameState`.
-- Approve the initial `SessionStatistics` fields.
-- Reconcile the mini PAG's `GameSession` command names with the fuller PAG where they differ.
-- Define which existing command stubs remain unavailable until later milestones or engine support.
-- Update the PAG or architecture documentation when an approved decision changes a published type or
-  public contract.
+- Apply the resolved money, immutability, generic-outcome, aggregate-history, and snapshot decisions.
+- Remove unresolved `object` placeholders from Milestone 2 values.
+- Define immutable command result values and generic statuses.
+- Remove custom table settings and `casino_profile` from Milestone 2 configuration.
+- Reconcile existing `GameSession` stubs with supported, rejected, and deferred behavior.
+- Ensure documentation makes no per-bet settlement or transactional rollback promise.
 
-Deliverable:
+Deliverable: an agreed domain API with unsupported behavior represented explicitly.
 
-- An agreed domain API with no unresolved `object` placeholders or contradictory ownership rules.
+## WP2.2: Immutable State And Action Model
 
-## WP2.2: Immutable State and Action Model
-
-Goal:
-
-- Produce a stable, read-only representation of the current session for future controller use.
+Goal: produce a stable, recursively immutable representation for future controller use.
 
 Tasks:
 
 - Keep `GamePhase` values aligned with the PAG.
-- Implement `AvailableActions` as an immutable value.
-- Implement `GameState` as an immutable, detached projection according to Decision 2.
-- Define initial state before any roll: point off, no dice result, no last roll, and empty history.
-- Centralize all action computation inside `GameSession`.
-- Keep Milestone 3 actions unavailable: `can_undo`, `can_save`, and `can_load` remain false.
-- Represent unavailable engine-dependent actions as false rather than approximating legality.
-- Verify state creation does not leak mutable session containers or mutable engine ownership when the
-  detached-state decision is approved.
+- Implement immutable `AvailableActions` and detached `GameState` values.
+- Define initial state: point off, no dice result, no last roll, and empty roll history.
+- Publish detached bet-layout, history, and statistics values only.
+- Centralize action computation inside `GameSession`.
+- Treat action flags as conservative permission to attempt a command, not acceptance guarantees.
+- Keep unsupported and Milestone 3 actions false.
+- Test that published state cannot mutate the live session or expose a live engine object.
 
-Deliverable:
+Deliverable: immutable state and action values with focused mutation-resistance tests.
 
-- Immutable state and action values with focused construction, equality, and mutation-resistance
-  tests.
+## WP2.3: Minimal Configuration And Ruleset Factory
 
-## WP2.3: Session Configuration and Ruleset Factory
-
-Goal:
-
-- Construct a valid engine table from explicit immutable session settings.
+Goal: construct a valid engine table from minimal immutable session settings.
 
 Tasks:
 
-- Validate a positive starting bankroll.
-- Validate supported ruleset identifiers explicitly; reject unknown values instead of silently
-  falling back to another ruleset.
-- Support `classic` and `crapless` only while those are the pinned engine's supported application
-  rulesets.
-- Construct the corresponding `crapssim.rules` object in the session layer.
-- Create a new `Table`, merge approved `TableSettings` overrides into engine defaults, and preserve
-  the pinned `come_out_working_policy` contract.
-- Create exactly one player using `NullStrategy` so interactive sessions never receive automatic
-  strategy bets.
-- Keep the Crapless startup default decision deferred to Milestone 6; Milestone 2 callers must pass
-  an explicit configuration or use an explicitly documented neutral test default.
+- Validate a finite positive starting bankroll.
+- Accept only explicit `classic` and `crapless` ruleset identifiers.
+- Construct the corresponding public `crapssim.rules` object.
+- Create a `Table` without mutating its default settings.
+- Create exactly one player with `NullStrategy`.
+- Do not add custom table settings, casino profiles, or silent ruleset fallback.
 
-Deliverable:
+Deliverable: validated minimal configuration and tested engine-default table construction.
 
-- Validated `SessionConfiguration` and a tested ruleset-to-engine construction boundary.
+## WP2.4: Reviewed Bet Adapter
 
-## WP2.4: History and Bet-Change Model
-
-Goal:
-
-- Record every roll and significant session transition without using application logs.
+Goal: translate a limited set of application requests into public engine bet constructors and active
+bets into detached descriptive projections.
 
 Tasks:
 
-- Implement constructible `SessionHistory` collections with per-instance storage.
-- Keep `RollRecord`, `ShooterRecord`, and `SessionEvent` aligned with PAG field ownership.
-- Replace `RollRecord.bet_changes: list[object]` with the PAG-defined `BetChange` type.
-- Add `BetAction` and `BetChangeReason` values from the full PAG unless WP2.1 approves a narrower
-  contract.
-- Record UTC-aware timestamps through an injectable clock or another deterministic test boundary.
-- Record one `RollRecord` for every successful roll.
-- Record `NEW_SESSION`, `NEW_SHOOTER`, `POINT_ESTABLISHED`, `POINT_MADE`, and `SEVEN_OUT` events from
-  observed engine transitions.
-- Reserve the `UNDO`, `SESSION_SAVED`, and `SESSION_LOADED` event types and the `UNDO` and `LOAD`
-  bet-change reasons for Milestone 3.
-- Do not infer wins, losses, or payout values by reimplementing bet rules. If the current engine does
-  not expose enough result detail for accurate `BetChange` records, add that capability to
-  `crapssim` and advance the pinned revision deliberately.
+- Propose and approve the supported request and projection matrix before implementation.
+- Use explicit reviewed bindings rather than reflection-based discovery.
+- Validate only domain shape such as known keys and finite positive amounts; leave legality to the
+  engine.
+- Use public constructor parameters and public attributes only.
+- Return generic rejection for unknown or unsupported requests.
+- Add installed-v0.4.1 contract tests for every approved binding.
 
-Deliverable:
+Deliverable: a narrow adapter and public-API tests with no copied rule behavior.
 
-- Complete, deterministic history values backed by engine-observed transitions.
+## WP2.5: Aggregate History Model
 
-## WP2.5: Session Statistics
-
-Goal:
-
-- Maintain cumulative statistics from authoritative session outcomes.
+Goal: record session transitions without claiming unavailable per-bet roll authority.
 
 Tasks:
 
-- Implement the fields approved in Decision 3.
-- Initialize all counters and net values for a new session.
+- Implement per-instance immutable snapshots backed by internal append-only history ownership.
+- Record UTC-aware timestamps through an injectable clock.
+- Record initial `NEW_SESSION` followed by `NEW_SHOOTER` events.
+- Record one aggregate record for every successful roll.
+- Record dice, point before/after, shooter, total-player-cash delta, and detached layouts.
+- Record accepted player-command changes with aggregate command cash delta.
+- Record `POINT_ESTABLISHED`, `POINT_MADE`, `SEVEN_OUT`, and subsequent `NEW_SHOOTER` events from
+  public before/after state.
+- Do not classify roll-time bet differences or publish per-bet settlement amounts.
+
+Deliverable: deterministic aggregate history grounded in public engine observations.
+
+## WP2.6: Session Statistics
+
+Goal: maintain cumulative statistics from aggregate authoritative transitions.
+
+Minimum fields:
+
+- Total rolls and total shooters started.
+- Points established and points made.
+- Seven-outs.
+- Net total-player-cash change from the configured starting bankroll.
+
+Tasks:
+
+- Initialize all values for a new session and publish immutable snapshots.
 - Update statistics exactly once after each successful roll.
-- Count point and shooter transitions from engine state/history events rather than duplicate rules.
-- Calculate net bankroll change from engine-owned bankroll values and configured starting bankroll.
-- Ensure failed or rejected commands do not change statistics.
-- Define whether statistics are internally mutable with immutable state snapshots or represented as
-  replacement immutable values.
+- Count transitions from observed public engine state and recorded events.
+- Calculate net change from public total-player-cash; do not calculate payouts.
+- Ensure expected command rejection does not change statistics.
 
-Deliverable:
+Deliverable: deterministic aggregate statistics with representative sequence tests.
 
-- A deterministic statistics update model with tests for initial state and representative roll
-  sequences.
+## WP2.7: GameSession Construction And State Production
 
-## WP2.6: GameSession Construction and State Production
-
-Goal:
-
-- Make `GameSession` the single constructible owner of a live session.
+Goal: make `GameSession` the single constructible owner of a live session.
 
 Tasks:
 
-- Add an initializer accepting `SessionConfiguration` and optional test seams approved below.
+- Add an initializer accepting minimal configuration, an optional deterministic dice seam, and an
+  injectable clock.
 - Own one `Table`, one `Player`, one history owner, one statistics owner, and immutable settings.
-- Initialize an empty undo stack without capturing or restoring snapshots.
-- Record the initial `NEW_SESSION` event.
-- Produce the initial and post-command `GameState` values.
-- Add narrow injection points for deterministic dice outcomes and timestamps. Keep production defaults
-  random and UTC-based.
-- Do not expose alternative mutation paths around `GameSession` in Bubble Craps runtime code.
+- Do not construct a snapshot or undo stack.
+- Record initial `NEW_SESSION` and `NEW_SHOOTER` events in that order.
+- Produce initial and post-command detached `GameState` values.
+- Keep production dice random and timestamps UTC-based.
+- Expose no alternative Bubble Craps runtime mutation path.
 
-Deliverable:
+Deliverable: a constructible session with deterministic Classic and Crapless initial-state tests.
 
-- A constructible session with deterministic initial-state tests for Classic and Crapless rulesets.
+## WP2.8: Supported Best-Effort Bet Commands
 
-## WP2.7: Bet Command Orchestration
-
-Goal:
-
-- Implement core player commands while leaving all legality and bankroll effects to `crapssim`.
+Goal: implement supported player commands while preserving engine ownership.
 
 Tasks:
 
-- Change `place_bet` to accept a concrete `Bet` and delegate to `Player.add_bet`.
-- Add or finalize `remove_bet` and delegate removability and returned wager handling to
-  `Player.remove_bet`.
-- Detect rejected engine commands and return or raise a stable domain outcome without partial state
-  changes. The exact outcome contract must be approved in WP2.1 for later controller translation.
-- Track the most recent successful player bet set needed by repeat and double commands.
-- Implement `repeat_last_bet`, `double_bet`, and `clear_all_bets` by composing public engine bet-copy,
-  add, and remove operations; do not mutate bankroll directly.
-- Implement `set_bets_on_or_off` only after Decision 4 has an engine-owned contract.
-- Recompute available actions after every successful command.
-- Verify illegal, unaffordable, non-removable, and unsupported commands leave state, history, and
-  statistics unchanged.
+- Place approved adapter requests through public bet constructors and `Player.add_bet`.
+- Remove an identified projected bet through `Player.remove_bet` without private placement keys.
+- Determine acceptance from detached public before/after observations and total-player-cash change.
+- Return generic `REJECTED` when an expected refusal produces no observable change.
+- Record accepted player-command changes with aggregate cash delta.
+- Evaluate clear, repeat, and double independently.
+- Return `NOT_IMPLEMENTED` when a convenience command cannot be bounded safely.
+- Return `NOT_IMPLEMENTED` for `set_bets_on_or_off`; do not attempt a Bubble Craps workaround.
+- Do not promise rollback after an unexpected exception.
 
-Deliverable:
+Deliverable: tested supported commands and an explicit convenience-command limitation list.
 
-- Tested core bet commands that never bypass engine legality or bankroll ownership.
+## WP2.9: Roll Orchestration And Aggregate Transitions
 
-## WP2.8: Roll Orchestration and Domain Transitions
-
-Goal:
-
-- Advance the session by one complete engine-owned roll and record its effects.
+Goal: advance one complete engine-owned roll and record aggregate effects.
 
 Tasks:
 
-- Capture only the pre-roll values needed to describe changes; do not create an undo snapshot.
+- Reject a roll attempt when the interactive player has no active wager.
+- Capture only public pre-roll values needed for aggregate history and statistics.
 - Invoke `crapssim.TableUpdate.run` exactly once for each accepted roll.
-- Use the interactive player's `NullStrategy` so `TableUpdate.run_strategies` does not add bets.
-- Support an explicit dice outcome test seam that passes through `TableUpdate.run(...,
-  dice_outcome=...)`; do not set point, payouts, or bankroll directly in tests.
-- Observe point, shooter, dice, bet, and bankroll values before and after the engine update.
-- Append history records and update statistics only after successful engine completion.
-- Return the session to `READY` after the synchronous domain operation. `ROLLING`, `RESOLVING`, and
-  `ANIMATING` timing across Qt signals is deferred to Milestone 4/5 unless a transient phase observer
-  is explicitly introduced and tested without Qt.
-- Define failure atomicity: if engine execution raises, do not append partial history or statistics.
-  Full rollback remains Milestone 3, so any stronger atomicity requirement must be designed there.
+- Use `NullStrategy` so strategy updates do not add bets.
+- Pass explicit test dice through the public `dice_outcome` parameter.
+- Observe public dice, point, shooter, detached layout, and total-player-cash values afterward.
+- Append one roll record and update statistics once after successful completion.
+- Derive only aggregate point and shooter events; do not infer per-bet outcomes.
+- Return the synchronous session to `READY`; Qt-timed phases remain deferred.
+- Do not claim strict failure atomicity after an unexpected engine exception.
 
-Deliverable:
+Deliverable: deterministic aggregate transitions for representative Classic and Crapless sequences.
 
-- Deterministic roll transitions for come-out wins, point establishment, point made, seven-out, and
-  representative bet outcomes under both supported rulesets.
+## WP2.10: New Session And Deferred Commands
 
-## WP2.9: New Session and Deferred Commands
-
-Goal:
-
-- Complete the domain lifecycle without crossing into persistence or undo.
+Goal: complete the domain lifecycle without crossing into persistence or undo.
 
 Tasks:
 
-- Implement `new_session` as a clean reconstruction from validated configuration, or define a class
-  factory if replacing the object is safer than mutating it in place.
-- Verify no history, statistics, bets, dice result, or point state leaks from the previous session.
-- Leave `undo`, `save`, and `load` explicitly unavailable and raising a stable not-supported outcome
-  until Milestone 3.
-- Keep snapshot restoration and persistence module behavior unimplemented.
+- Rebuild engine and domain internals from validated configuration for a new session.
+- Verify no history, statistics, bets, dice, point, shooter, or identifier leaks from the old session.
+- Record fresh `NEW_SESSION` and `NEW_SHOOTER` events.
+- Return `NOT_IMPLEMENTED` for `set_bets_on_or_off`, undo, save, load, and unsupported convenience
+  commands.
 
-Deliverable:
+Deliverable: tested reset behavior and explicit deferred-command results.
 
-- Tested session reset behavior and explicit deferred-command behavior.
+## WP2.11: Domain Test Suite And Verification
 
-## WP2.10: Domain Test Suite and Verification
-
-Goal:
-
-- Prove the domain behavior and architecture boundaries needed for Milestone 3 and 4.
+Goal: prove the revised domain behavior and architecture boundaries.
 
 Tasks:
 
-- Replace the Milestone 1 session import test with focused modules for state, settings, history,
-  statistics, and `GameSession` behavior.
-- Test success, rejection, and no-mutation-on-rejection for every implemented command.
-- Test deterministic roll sequences with explicit dice outcomes.
-- Test Classic and Crapless point behavior through the `crapssim` integration boundary.
-- Test initial and updated `AvailableActions` values.
-- Test history ordering, UTC timestamps, shooter records, events, bet changes, and statistics.
-- Test state immutability according to the approved Decision 2 contract.
-- Add runtime contract tests for every `crapssim` API newly relied upon by Bubble Craps, including
-  `NullStrategy`, deterministic `TableUpdate.run`, ruleset classes, bet-copy behavior, and any new
-  engine capability added for bet changes or working controls.
-- Keep `tests/test_architecture.py` passing and add no Qt imports to domain tests or modules.
+- Add focused tests for values, configuration, adapter, state, history, statistics, commands, rolls,
+  and lifecycle.
+- Verify both rulesets, engine defaults, `NullStrategy`, and deterministic outcomes.
+- Verify every adapter binding uses public v0.4.1 constructors and attributes.
+- Verify generic rejection and no history/statistics mutation after expected rejection.
+- Verify aggregate event order, shooter lifecycle, statistics, and session reset.
+- Assert that no per-bet roll outcome or attributable payout is published or inferred.
+- Assert that runtime and tests do not import a sibling checkout or prospective contract module.
+- Keep architecture tests passing and Qt out of session modules and tests.
 - Run all project quality gates.
 
-Deliverable:
-
-- Deterministic domain and integration tests that demonstrate all Milestone 2 acceptance criteria.
+Deliverable: deterministic tests for every revised acceptance criterion.
 
 ## Required Test Scenarios
 
-At minimum, tests should cover:
-
-- New Classic session initial state.
-- New Crapless session initial state.
-- Unknown ruleset and invalid bankroll rejection.
-- Table-settings override without loss of engine defaults.
-- Successful and rejected bet placement.
-- Successful and rejected bet removal.
-- Repeat, double, clear, and supported on/off behavior.
-- No automatic strategy bet placement during a roll.
-- Come-out natural and Classic craps outcomes through engine behavior.
-- Classic point establishment, point made, and seven-out.
-- Crapless extreme-point establishment for 2, 3, 11, or 12.
-- Dice values, point before/after, shooter number, and bankroll delta in `RollRecord`.
-- Significant event order for a deterministic multi-roll sequence.
-- Shooter roll count, points made, and profit.
-- Statistics after point made and seven-out sequences.
-- State and action values before and after each command.
-- No history/statistics changes after a rejected command.
-- New-session reset with no prior-state leakage.
-- Explicit not-supported behavior for Milestone 3 commands.
+- New Classic and Crapless sessions using engine defaults.
+- Unknown ruleset, non-finite money, non-positive bankroll, and malformed request rejection.
+- One `NullStrategy` player and no automatic strategy bets during a roll.
+- Approved adapter construction and detached projection for every supported binding.
+- Unknown adapter key produces generic rejection without mutation.
+- Successful and expected-rejected supported bet placement and removal.
+- Explicit `NOT_IMPLEMENTED` results for `set_bets_on_or_off` and unsupported convenience commands.
+- Roll without an active wager is rejected without mutation.
+- Deterministic Classic come-out, point establishment, point made, and seven-out sequences.
+- Deterministic Crapless extreme-point establishment through engine behavior.
+- Dice, point before/after, shooter, total-player-cash delta, and layouts in aggregate roll records.
+- Significant aggregate event order across multi-roll and shooter transitions.
+- Statistics after point-made and seven-out sequences.
+- Recursive state immutability and absence of live engine objects.
+- No history or statistics change after an expected rejected command.
+- New-session reset with no prior state or identifier leakage.
+- Explicit `NOT_IMPLEMENTED` behavior for undo, save, and load.
+- No test expects or reconstructs a per-bet roll outcome.
 
 ## Acceptance Criteria
 
-All criteria must be true:
-
-- `GameSession` constructs a valid single-player Classic or Crapless session from explicit settings.
-- The interactive player uses no automatic betting strategy.
-- `GameState` and `AvailableActions` satisfy the approved immutability contract.
-- All action legality is computed by `GameSession` and all bet legality is delegated to `crapssim`.
-- Every successful roll produces exactly one `RollRecord` and updates statistics exactly once.
-- Point, shooter, bankroll, and bet outcomes match the pinned engine for deterministic sequences.
-- Significant session events are ordered and derived from observed engine transitions.
-- Core bet commands preserve engine ownership of legality and bankroll effects.
-- Rejected commands do not partially mutate domain history or statistics.
-- `SessionConfiguration`, `SessionHistory`, `SessionStatistics`, and the Milestone 2 portion of
-  `SessionSnapshot` are constructible and tested.
-- Undo restoration, save/load, Qt behavior, GUI behavior, and logging remain unimplemented.
-- Session modules and tests contain zero Qt imports.
-- No Bubble Craps module duplicates `crapssim` rules or payout calculations.
+- `GameSession` constructs one-player Classic or Crapless sessions from minimal explicit settings.
+- Tables retain the published engine's defaults without Bubble Craps overrides.
+- The interactive player uses `NullStrategy` and receives no automatic strategy bets.
+- The adapter's approved subset uses public v0.4.1 bindings only.
+- Published state, history, statistics, and bet projections are immutable and detached.
+- Available actions are conservative attempt permissions and unsupported actions remain false.
+- Supported bet commands delegate mutation to public methods and report only generic outcomes.
+- Expected rejected commands do not change published state, history, or statistics.
+- Every accepted roll has an active wager, calls `TableUpdate.run` once, creates one aggregate roll
+  record, and updates statistics once.
+- Aggregate observations match the installed engine for deterministic sequences.
+- No Bubble Craps value claims a per-bet roll outcome, payout attribution, or specific engine
+  rejection reason.
+- Unexpected exceptions are not described as transactionally rolled back.
+- New-session reconstruction leaks no prior state or identifiers.
+- `set_bets_on_or_off`, unsupported convenience commands, undo, save, and load return
+  `NOT_IMPLEMENTED`.
+- No snapshot or undo stack is created in Milestone 2.
+- No Milestone 2 change is required in the `crapssim` repository.
+- Session modules and tests contain zero Qt imports and duplicate no engine rules.
 - Ruff formatting, Ruff lint, strict mypy, pytest, and `pip check` all pass.
 
 ## Verification Checklist
 
-Reviewer checklist:
-
-- Confirm all five decisions in this document were resolved and reflected in code/docs.
-- Inspect every `crapssim` import and verify it occurs only in the session layer or tests.
-- Verify no winning-number, losing-number, payout-ratio, or point-transition tables were copied into
-  Bubble Craps.
-- Verify `NullStrategy` prevents simulation-driven bets in an interactive session.
-- Verify deterministic tests drive rolls through `TableUpdate`, not by manually mutating post-roll
-  state.
-- Verify state cannot mutate the live session through exposed containers under the approved contract.
-- Verify history and statistics update once per successful roll and not for rejected commands.
-- Verify unsupported rulesets and commands fail predictably.
+- Confirm the supported adapter matrix and clear, repeat, and double subset were approved first.
+- Verify the sibling `crapssim` checkout is not a runtime or test dependency.
+- Inspect every `crapssim` binding for public-only use.
+- Verify no winning-number, losing-number, payout, point, removability, or working-state rule was
+  copied into Bubble Craps.
+- Verify tables retain engine defaults and players use `NullStrategy`.
+- Verify deterministic tests drive rolls through one `TableUpdate.run` call.
+- Verify roll records remain aggregate and never classify per-bet layout differences.
+- Verify state cannot mutate live session containers or engine instances.
+- Verify history and statistics update once per successful roll and not after expected rejection.
+- Verify unsupported commands return `NOT_IMPLEMENTED` and have false action flags.
+- Verify no session code attempts to emulate Interblock Set Bets On/Off by mutating engine bet
+  collections around a roll or reproducing its lifecycle transitions.
 - Run `python -m compileall -q main.py src/bubblecraps`.
 - Run `python tools/check.py`.
 - Run `python -m pytest -v` and inspect all domain tests discovered.
 - Verify `tests/test_architecture.py` still passes.
-- Verify the installed engine is the exact published `crapssim==0.4.1` package.
+- Verify the installed engine is the exact published `crapssim==0.4.1` distribution.
 
-## Deliverables Summary
+## Risks And Mitigations
 
-Milestone 2 is complete only when all items exist and are reviewable:
+Risk: Bubble Craps becomes a second rules engine through adapter or command preflight.
 
-- Approved domain contract decisions and any required PAG amendments.
-- Immutable state and available-action implementation.
-- Validated session configuration and supported ruleset factory.
-- Constructible history, bet-change, statistics, and snapshot value models.
-- Constructible `GameSession` with strategy-neutral engine ownership.
-- Core bet command and deterministic roll orchestration.
-- New-session lifecycle and explicit deferred-command behavior.
-- Focused, deterministic domain and engine-integration tests.
-- Passing architecture and project quality gates.
+- Mitigation: Approve explicit public bindings, validate request shape only, and reject mappings that
+  need copied rule data or private behavior.
 
-## Risks and Mitigations
+Risk: Silent engine command rejection is presented as a specific failure.
 
-Risk: Bubble Craps accidentally becomes a second rules engine.
+- Mitigation: Observe detached public state and return only generic `REJECTED`.
 
-- Mitigation: Delegate all legality and resolution to public `crapssim` APIs and review domain tests
-  for copied number or payout tables.
+Risk: Before/after layouts are mistaken for authoritative settlement events.
 
-Risk: A frozen `GameState` leaks mutable engine objects.
+- Mitigation: Record aggregate observations and prohibit per-bet roll classifications and payout
+  attribution.
 
-- Mitigation: Resolve Decision 2 before implementation and test mutation resistance explicitly.
+Risk: Best-effort multi-step commands imply transactional safety.
 
-Risk: Monetary values are truncated or compared incorrectly.
+- Mitigation: Review convenience commands independently, document limitations, and return
+  `NOT_IMPLEMENTED` when they cannot be bounded through public APIs.
 
-- Mitigation: Resolve Decision 1, preserve engine values, and use appropriate approximate assertions
-  only at the integration boundary.
+Risk: Bubble Craps partially emulates Set Bets On/Off with `always_working` or temporary bet removal.
 
-Risk: `TableUpdate` automatically places strategy bets.
+- Mitigation: Defer the command to Milestone 6, where a published engine release must implement the
+  complete Interblock Section 3.2 behavior; return `NOT_IMPLEMENTED` throughout Milestone 2.
 
-- Mitigation: Construct the interactive player with `NullStrategy` and add a regression test proving
-  no automatic bets appear.
+Risk: Frozen state leaks mutable engine or session ownership.
 
-Risk: History cannot distinguish won, lost, moved, or removed bets from before/after lists.
+- Mitigation: Publish recursively immutable detached values and test mutation resistance.
 
-- Mitigation: Add an engine-owned result/event capability rather than infer game rules in Bubble
-  Craps.
+Risk: Milestone 2 absorbs engine, undo, or persistence work.
 
-Risk: Milestone 2 absorbs undo or persistence work.
-
-- Mitigation: Limit snapshots to their approved value contract; defer capture stacks, restoration,
-  serialization, and file handling to Milestone 3.
-
-Risk: Transient `GamePhase` values imply asynchronous behavior in a synchronous domain call.
-
-- Mitigation: Keep externally observable asynchronous phase transitions for the Qt event pipeline in
-  Milestone 4/5 unless a pure-domain observer contract is explicitly approved.
+- Mitigation: Require no engine changes, create no snapshots or undo stack, and keep deferred
+  commands explicit.
 
 ## Milestone 2 Exit Decision
 
-Decision options:
-
-- Pass: All acceptance criteria are satisfied and deterministic domain tests pass.
+- Pass: Every acceptance criterion is met through the exact published v0.4.1 API and all quality
+  gates pass.
 - Pass with follow-ups: Only non-behavioral documentation issues remain with owners and target
   milestones.
-- Hold: Domain state leaks mutable ownership, game rules are duplicated, deterministic transitions
-  fail, or undo/persistence/controller behavior has crossed milestone boundaries.
+- Hold: The implementation depends on private or unreleased engine behavior, duplicates a rule,
+  infers per-bet roll outcomes, leaks mutable ownership, or overstates command atomicity.
 
-## Review Notes
+## Review Record
 
-Use this section to record decisions before implementation:
-
-- Monetary type:
-- Immutable state strategy:
-- Statistics fields:
-- Bet working-control engine contract:
-- Snapshot boundary:
+- Supported adapter request keys and constructors:
+- Supported detached bet projection fields:
+- Implemented convenience commands and limitations:
+- Commands returning `NOT_IMPLEMENTED` (must include `set_bets_on_or_off`):
 - Additional approved changes:
+
+## Deliverables Summary
+
+- Finalized domain values and generic command outcomes.
+- Minimal validated configuration and engine-default ruleset factory.
+- Approved public-only bet constructor/projection adapter.
+- Immutable detached state, aggregate history, and statistics.
+- Constructible `GameSession` with strategy-neutral engine ownership.
+- Supported best-effort commands and explicit unsupported results.
+- Deterministic aggregate roll orchestration and clean new-session lifecycle.
+- Focused domain and installed-engine contract tests.
+- Passing architecture and project quality gates.

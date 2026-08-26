@@ -5,6 +5,12 @@
 > Living architecture document for the Bubble Craps GUI application.
 > Document is refered to as Project Architecture Guide (aka "PAG").
 
+> Milestone sequencing note: The class responsibilities below describe the target application
+> architecture. Milestone 2 implements only the domain subset defined in
+> [Milestone 2: Domain Core Completion](milestones/milestone-2-domain-core-completion.md). Persistence
+> and undo begin in Milestone 3, Qt integration begins in Milestone 4, and the Interblock Section 3.2
+> Set Bets On/Off behavior is deferred to Milestone 6 pending a published engine update.
+
 ------------------------------------------------------------------------
 
 # Project Overview
@@ -180,8 +186,8 @@ crapssim
 -   Own Player and Table
 -   Maintain session history
 -   Statistics
--   Undo
--   Save / Load
+-   Undo (Milestone 3)
+-   Save / Load (Milestone 3)
 -   Produce immutable GameState
 
 ### crapssim
@@ -192,6 +198,11 @@ crapssim
 -   Point
 -   Player bankroll
 -   Bet resolution
+
+For Milestone 2, the required engine is the exact published `crapssim==0.4.1` package. Bubble Craps
+uses only its public constructors, methods and attributes and does not depend on a sibling checkout.
+If an Interblock requirement needs engine behavior that this release cannot express, the feature is
+deferred until `crapssim` owns the behavior and publishes a new release.
 
 ------------------------------------------------------------------------
 
@@ -264,11 +275,11 @@ Represents a single-player bubble craps session.
 
 Owns:
 - Table (crapssim)
-- Player (crapssim)
+- Player (crapssim), constructed with `NullStrategy` for interactive sessions
 - History
 - Statistics
 - Settings
-- Undo stack
+- Undo stack (Milestone 3, not constructed in Milestone 2)
 
 Produces:
 - GameState
@@ -285,22 +296,32 @@ class GameSession:
     history: SessionHistory
     statistics: SessionStatistics
     settings: SessionConfiguation
+    # Added in Milestone 3:
     undo_stack: list[SessionSnapshot]
 
     @property
     def state(self) -> GameState: ...
 
-    def roll(self): ...
-    def undo(self): ...
-    def repeat_last_bet(self): ...
-    def double_bet(self): ...
-    def set_bets_on_or_off(self): ...
-    def clear_all_bets(self): ...
-    def new_session(self): ...
-    def save(self, filename: str): ...
+    def roll(self) -> CommandResult: ...
+    def place_bet(self, request: BetRequest) -> CommandResult: ...
+    def remove_bet(self, bet_id: str) -> CommandResult: ...
+    def repeat_last_bet(self) -> CommandResult: ...
+    def double_bet(self) -> CommandResult: ...
+    def clear_all_bets(self) -> CommandResult: ...
+    def set_bets_on_or_off(self, working: bool) -> CommandResult: ...
+    def new_session(self) -> CommandResult: ...
+
+    # Return NOT_IMPLEMENTED until their owning milestones:
+    def undo(self) -> CommandResult: ...
+    def save(self, filename: str) -> CommandResult: ...
     @classmethod
     def load(cls, filename: str): ...
 ```
+
+Milestone 2 commands use stable generic outcomes: `ACCEPTED`, `REJECTED`, and `NOT_IMPLEMENTED`.
+Published `crapssim==0.4.1` silently accepts or rejects player bet operations, so Bubble Craps must
+not invent engine-specific rejection reasons. `set_bets_on_or_off` returns `NOT_IMPLEMENTED` until
+Milestone 6 integrates the complete engine-owned Interblock Section 3.2 behavior.
 
 ---
 
@@ -317,18 +338,21 @@ The GUI never determines whether an action is legal. Instead:
 class GameState:
     phase: GamePhase
     actions: AvailableActions
-    bankroll: int
+    bankroll: float
     point: int | None
     puck_on: bool
-    bets: list[Bet]
+    bets: tuple[BetState, ...]
     die1: int | None
     die2: int | None
     last_roll: RollRecord | None
-    statistics: SessionStatistics
-    history: SessionHistory
+    statistics: SessionStatisticsState
+    history: SessionHistoryState
 ```
 
-No Qt types belong in GameState.
+No Qt types, mutable engine objects, or mutable session containers belong in `GameState`. A frozen
+outer dataclass is insufficient by itself: all nested values must also be detached and recursively
+immutable. `BetState` is an application-owned descriptive projection built only from reviewed public
+engine attributes; it does not contain a live `Bet` or encode game rules.
 
 #### GamePhase
 
@@ -348,14 +372,24 @@ class AvailableActions:
     can_roll: bool
     can_place_bets: bool
     can_remove_bets: bool
+    can_repeat_last_bet: bool
+    can_double_bets: bool
+    can_clear_bets: bool
+    can_set_bets_on_or_off: bool
     can_undo: bool
     can_save: bool
     can_load: bool
 ```
 
+Action flags are conservative permission to attempt a command, not guarantees that the engine will
+accept it. Milestone 2 keeps `can_set_bets_on_or_off`, `can_undo`, `can_save`, and `can_load` false.
+
 ------------------------------------------------------------------------
 
 ### SessionSnapshot
+
+> Milestone ownership: This is a Milestone 3 contract. Milestone 2 does not create
+> `SessionSnapshot` values, capture snapshots, or maintain an undo stack.
 
 A `SessionSnapshot` is an immutable checkpoint of the application's session state.
 
@@ -384,12 +418,14 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class SessionSnapshot:
     """Immutable checkpoint of a GameSession."""
-    player: Player
-    table: Table
-    history: SessionHistory
-    statistics: SessionStatistics
+    engine_state: EngineSnapshot
+    history: SessionHistoryState
+    statistics: SessionStatisticsState
     settings: SessionConfiguration
 ```
+
+The exact Milestone 3 snapshot representation must be able to restore engine state deterministically
+without treating a frozen reference to a mutable `Player` or `Table` as immutable.
 
 ### GameState vs. SessionSnapshot
 
@@ -407,8 +443,12 @@ class SessionConfiguration:
     ruleset: str
     table_settings: TableSettings # matches crapssim class
     casino_profile: str | None
-    starting_bankroll: int
+    starting_bankroll: float
 ```
+
+Milestone 2 accepts only `classic` and `crapless`, requires a finite positive bankroll, and constructs
+the engine with its committed defaults. Custom `TableSettings` overrides and `casino_profile` are not
+part of the Milestone 2 configuration contract.
 
 ------------------------------------------------------------------------
 
@@ -418,11 +458,16 @@ class SessionHistory:
     rolls: list[RollRecord]
     shooters: list[ShooterRecord]
     events: list[SessionEvent]
+
+    def snapshot(self) -> SessionHistoryState: ...
 ```
+
+`SessionHistory` is the internal append-only owner. Published state uses a recursively immutable
+`SessionHistoryState` snapshot with tuple collections.
 
 #### RollRecord
 ``` python
-@dataclass
+@dataclass(frozen=True)
 class RollRecord:
     die1: int
     die2: int
@@ -431,17 +476,23 @@ class RollRecord:
     shooter_number: int
     point_before: int | None
     point_after: int | None
-    bankroll_delta: int
-    bet_changes: list[BetChange]
+    total_player_cash_delta: float
+    bets_before: tuple[BetState, ...]
+    bets_after: tuple[BetState, ...]
 ```
+
+`RollRecord` is aggregate history. The before/after layouts are observations and must not be labeled
+as per-bet wins, losses, pushes, moves, removal reasons, payouts, or attributable cash changes because
+`crapssim==0.4.1` does not publish an authoritative per-bet settlement journal. Accepted player
+commands may be recorded separately as player-command changes.
 #### ShooterRecord
 ``` python
-@dataclass
+@dataclass(frozen=True)
 class ShooterRecord:
     shooter_number: int
     rolls: int
-    point_numbers_made: list[int]
-    profit: int
+    point_numbers_made: tuple[int, ...]
+    profit: float
 ```
 
 #### SessionEvent
@@ -479,6 +530,11 @@ class SessionEvent:
 |--------|---------|
 | `RollRecord` | Records every roll of the dice and its effects. |
 | `SessionEvent` | Records significant milestones during the lifetime of the session. |
+
+Milestone 2 reserves `UNDO`, `SESSION_SAVED`, and `SESSION_LOADED` for Milestone 3. Its minimum
+statistics are total rolls, shooters started, points established, points made, seven-outs, and net
+total-player-cash change from the configured starting bankroll. Statistics are derived from public
+engine transitions and aggregate history, never by recalculating game outcomes.
 
 ------------------------------------------------------------------------
 
@@ -560,13 +616,13 @@ SessionController.roll()
  ↓
 GameSession.roll()
  ↓
-crapssim.Table.roll()
+crapssim.TableUpdate.run() exactly once
  ↓
-Update Player
+Observe public engine state
  ↓
-Update History
+Append one aggregate RollRecord
  ↓
-Update Statistics
+Update SessionStatistics exactly once
  ↓
 Produce GameState
  ↓
@@ -581,7 +637,11 @@ Animations never modify game state.
 
 ## Undo Flow
 
-Every user action that modifies the session should create a snapshot **before** any changes are made.
+> Milestone ownership: Undo is implemented in Milestone 3. Milestone 2 returns `NOT_IMPLEMENTED` and
+> does not create snapshots or an undo stack.
+
+Once Milestone 3 is implemented, every user action that modifies the session should create a
+snapshot **before** any changes are made.
 
 ```text
 User Action

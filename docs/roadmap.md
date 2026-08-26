@@ -85,6 +85,8 @@ Scope:
 - Build main game surface and table interaction shell.
 - Implement AssetManager abstraction so widgets do not hardcode asset paths.
 - Drive control enablement exclusively from AvailableActions.
+- Represent the Interblock Set Bets On/Off control as unavailable until Milestone 6 adds the required
+  published engine capability and domain integration.
 - Add animation scaffolding where visuals reflect, but never mutate, game state.
 
 Exit Criteria:
@@ -99,11 +101,21 @@ Objective:
 Scope:
 - Set Crapless as the default startup ruleset.
 - Validate representative behavior against PAG-aligned Interblock requirements.
+- Add the complete Interblock Section 3.2 Set Bets On/Off behavior to `crapssim`, release it as a
+  published engine version, and update Bubble Craps to that exact version.
+- Integrate engine-owned next-roll suppression for Place, Lay, Buy, Odds, and Hard Ways bets,
+  including the documented command exclusions and automatic point and seven-out transitions.
+- Implement `GameSession.set_bets_on_or_off`, detached working-state projection, history, snapshots,
+  undo, available actions, controller forwarding, and GUI activation against the published engine
+  capability.
 - Implement centralized LoggingManager with rotating file handling and crash capture.
 - Keep application diagnostics separate from gameplay history structures.
 
 Exit Criteria:
 - Compliance checklist exists with pass/fail evidence for core scenarios.
+- Interblock Section 3.2 behavior passes engine, domain, persistence, controller, and GUI tests
+  without Bubble Craps duplicating working-state or settlement rules.
+- Set Bets On/Off is enabled only when the installed published engine reports the required behavior.
 - Logging rotation and crash capture paths are verified.
 
 ## Milestone 7: Release Candidate for Core Experience
@@ -115,8 +127,8 @@ Scope:
 - Run regression across domain, persistence, controller, and GUI shell.
 - Perform manual authenticity review against PAG goals.
 - Freeze initial file format and configuration defaults.
-- Confirm the exact published `crapssim==0.4.1` dependency still satisfies the finalized Bubble Craps
-  v0.1.0 engine contract; upgrade only if an engine change is strictly necessary.
+- Confirm the exact published `crapssim` version selected in Milestone 6 satisfies the finalized
+  Bubble Craps v0.1.0 engine contract, including Interblock Section 3.2.
 - Record known gaps and post-release priorities.
 
 Exit Criteria:
