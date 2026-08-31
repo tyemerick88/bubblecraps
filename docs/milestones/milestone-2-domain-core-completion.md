@@ -1,6 +1,6 @@
 # Milestone 2: Domain Core Completion
 
-- Status: Implementation in progress; WP2.1 complete
+- Status: Implementation in progress; WP2.1-WP2.3 complete
 - Roadmap source: [docs/roadmap.md](../roadmap.md)
 - Primary architecture reference: [docs/PAG-mini-v0.6.md](../PAG-mini-v0.6.md)
 - Supporting design reference: [docs/PAG-v0.6.md](../PAG-v0.6.md)
