@@ -17,13 +17,20 @@ The project uses the following authorities, in order:
 
 1. The Interblock game description referenced by the PAG defines intended game behavior.
 2. `crapssim` implements game rules, bet legality, dice resolution, payouts, points, and bankroll
-   effects.
+   effects, except for the explicitly reviewed Bubble Craps product-surface availability filter.
 3. The PAG defines Bubble Craps product and application architecture.
 4. This contract defines package ownership and dependency direction.
 
 When `crapssim` differs from the intended Interblock behavior, fix or extend `crapssim` and consume
 that change here. Bubble Craps must not compensate by implementing a second rules engine in its
 session, controller, or GUI code.
+
+The sole current exception is the fixed Classic/Crapless availability matrix in
+[Bet Adapter Contract](bet-adapter-contract.md). The pinned engine permits Lay, Big 6, and Big 8 in
+Crapless because these bets are available at some live Crapless tables. The adapter may reject
+Interblock-unavailable identifiers before construction, but may not duplicate amount, timing,
+parent-bet, bankroll, removability, payout, or settlement legality. Any broader exception requires
+an explicit contract review.
 
 The required engine is the exact published `crapssim==0.4.1` package. Bubble Craps will use this
 version going forward unless an engine change is strictly necessary. Any necessary engine change

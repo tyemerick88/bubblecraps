@@ -1,6 +1,6 @@
 # Milestone 2: Domain Core Completion
 
-- Status: Implementation in progress; WP2.1-WP2.3 complete
+- Status: Implementation in progress; WP2.1-WP2.4 complete and approved
 - Roadmap source: [docs/roadmap.md](../roadmap.md)
 - Primary architecture reference: [docs/PAG-mini-v0.6.md](../PAG-mini-v0.6.md)
 - Supporting design reference: [docs/PAG-v0.6.md](../PAG-v0.6.md)
@@ -69,7 +69,8 @@ Milestone 2 targets the installed, published `crapssim==0.4.1` API as it exists:
 - `src/bubblecraps/session/` contains no PySide6, controller, GUI, application, or asset imports.
 - `GameSession` is the only Bubble Craps runtime class that mutates live `crapssim` objects.
 - Bubble Craps does not reproduce winning numbers, losing numbers, payout ratios, point rules, bet
-  legality, removability, working behavior, or bankroll calculations.
+  amount or timing legality, removability, working behavior, or bankroll calculations. WP2.4 owns
+  only the reviewed Interblock Classic/Crapless product-surface availability matrix.
 - `GameState` and `AvailableActions` are produced by `GameSession`; callers do not infer legality.
 - Published domain values contain no live engine objects or mutable session containers.
 - Domain tests use explicit dice outcomes or seeds and do not depend on uncontrolled randomness.
@@ -257,15 +258,16 @@ bets into detached descriptive projections.
 
 Tasks:
 
-- Propose and approve the supported request and projection matrix before implementation.
-- Replace the provisional `BetState.bet_type: str` field with a `BetType(StrEnum)` containing only
-  approved Bubble Craps integration identifiers; do not treat every engine class or Interblock bet
-  name as supported automatically.
+- Implement the approved [bet adapter contract](../bet-adapter-contract.md), containing 27 explicit
+  request/projection bindings and the reviewed Classic/Crapless product-surface availability filter.
+- Use `BetType(StrEnum)` values from the approved contract; do not treat every engine class or
+  Interblock bet name as supported automatically.
 - Use explicit reviewed bindings rather than reflection-based discovery.
-- Validate only domain shape such as known keys and finite positive amounts; leave legality to the
-  engine.
+- Validate domain shape, finite positive amounts, physical Hop dice faces, and the approved variant
+  availability matrix; leave all other legality to the engine.
 - Use public constructor parameters and public attributes only.
-- Return generic rejection for unknown or unsupported requests.
+- Return specific adapter errors for application-known request, availability, and projection
+  failures without inventing engine command rejection reasons.
 - Add installed-v0.4.1 contract tests for every approved binding.
 
 Deliverable: a narrow adapter and public-API tests with no copied rule behavior.

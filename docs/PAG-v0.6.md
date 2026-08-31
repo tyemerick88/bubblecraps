@@ -337,15 +337,22 @@ No Qt types, mutable engine objects, or mutable session containers belong in `Ga
 implements this recursively immutable state model. Its rule-neutral bet projection is:
 
 ```python
+class BetType(StrEnum):
+    """Approved Bubble Craps identifiers from the bet adapter contract."""
+
+
 @dataclass(frozen=True)
 class BetState:
     bet_id: str
-    bet_type: str
+    bet_type: BetType
     amount: float
     number: int | None = None
+    hop_result: tuple[int, int] | None = None
+    rolled_numbers: tuple[int, ...] | None = None
 ```
 
-WP2.4 defines the supported `bet_type` identifiers and public engine-to-projection mappings.
+The accepted [bet adapter contract](bet-adapter-contract.md) defines the 27 `BetType` values and
+public engine-to-projection mappings.
 
 ------------------------------------------------------------------------
 
@@ -741,8 +748,8 @@ SessionEvent
 # BetState
 
 `BetState` is a detached, recursively immutable Bubble Craps projection built only from approved
-public engine attributes. WP2.4 defines its fields and constructor mappings. Runtime state never
-publishes live `crapssim.Bet` objects.
+public engine attributes. The accepted [bet adapter contract](bet-adapter-contract.md) defines its
+fields and constructor mappings. Runtime state never publishes live `crapssim.Bet` objects.
 
 ------------------------------------------------------------------------
 

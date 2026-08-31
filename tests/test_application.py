@@ -11,4 +11,4 @@ def test_application_infrastructure_placeholders_are_importable() -> None:
 
 
 def test_package_exposes_the_work_package_release_version() -> None:
-    assert bubblecraps.__version__ == "0.0.0-alpha.2.1.2026-08-26"
+    assert bubblecraps.__version__ == "0.0.0-alpha.2.4.2026-08-31"

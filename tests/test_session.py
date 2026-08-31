@@ -12,7 +12,13 @@ from bubblecraps.session.game_session import GameSession
 from bubblecraps.session.history import RollRecord, SessionHistoryState, ShooterRecord
 from bubblecraps.session.settings import VIG_ROUNDING, Ruleset, SessionConfiguration
 from bubblecraps.session.snapshot import SessionSnapshot
-from bubblecraps.session.state import AvailableActions, BetState, GamePhase, GameState
+from bubblecraps.session.state import (
+    AvailableActions,
+    BetState,
+    BetType,
+    GamePhase,
+    GameState,
+)
 from bubblecraps.session.statistics import SessionStatisticsState
 
 
@@ -168,14 +174,14 @@ def test_initial_game_state_is_detached_and_immutable() -> None:
 def test_published_state_uses_only_detached_immutable_types() -> None:
     bet = BetState(
         bet_id="bet-1",
-        bet_type="place",
+        bet_type=BetType.PLACE,
         amount=12.0,
         number=6,
     )
     history = SessionHistoryState()
     statistics = SessionStatisticsState()
 
-    assert bet == BetState("bet-1", "place", 12.0, 6)
+    assert bet == BetState("bet-1", BetType.PLACE, 12.0, 6)
     assert get_type_hints(GameState)["bets"] == tuple[BetState, ...]
     assert get_type_hints(GameState)["history"] is SessionHistoryState
     assert get_type_hints(GameState)["statistics"] is SessionStatisticsState

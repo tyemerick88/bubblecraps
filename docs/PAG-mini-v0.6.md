@@ -355,15 +355,22 @@ immutable. `BetState` is an application-owned descriptive projection built only 
 engine attributes; it does not contain a live `Bet` or encode game rules.
 
 ```python
+class BetType(StrEnum):
+    """Approved Bubble Craps identifiers from the bet adapter contract."""
+
+
 @dataclass(frozen=True)
 class BetState:
     bet_id: str
-    bet_type: str
+    bet_type: BetType
     amount: float
     number: int | None = None
+    hop_result: tuple[int, int] | None = None
+    rolled_numbers: tuple[int, ...] | None = None
 ```
 
-WP2.4 defines the supported `bet_type` identifiers and public engine-to-projection mappings.
+The accepted [bet adapter contract](bet-adapter-contract.md) defines the 27 `BetType` values and
+public engine-to-projection mappings.
 
 #### GamePhase
 

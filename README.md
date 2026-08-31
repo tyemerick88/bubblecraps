@@ -3,12 +3,12 @@
 Bubble Craps is a PySide6 desktop application intended to recreate an authentic casino bubble craps
 experience. It uses [crapssim](https://github.com/skent259/crapssim) as the only game-rules engine.
 
-**Milestone 2 implementation is underway.** WP2.1 establishes the reconciled domain contracts,
-including immutable command outcomes, explicit ruleset and vig configuration, aggregate monetary
-types, and stable deferred-command behavior. Gameplay orchestration, persistence, controller wiring,
-and GUI rendering remain future work.
+**Milestone 2 implementation is underway.** WP2.1-WP2.4 establish the reconciled domain contracts,
+immutable state projections, validated Classic and Crapless session setup, and the approved public
+bet adapter. Gameplay orchestration, persistence, controller wiring, and GUI rendering remain future
+work.
 
-Current version: `0.0.0-alpha.2.1.2026-08-26`
+Current version: `0.0.0-alpha.2.4.2026-08-31`
 
 ## Versioning
 
@@ -26,7 +26,7 @@ use this prerelease format:
 - The version core remains `0.0.0` during milestone development.
 - The `alpha` prerelease label indicates that the public API is unstable and may change.
 - A work-package version is assigned only after that package's implementation and focused quality
-	gates pass.
+  gates pass.
 
 When a complete milestone satisfies all acceptance criteria, its release omits the work-package
 identifier:
