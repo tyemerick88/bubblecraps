@@ -59,3 +59,12 @@ class SessionHistory:
     rolls: list[RollRecord]
     shooters: list[ShooterRecord]
     events: list[SessionEvent]
+
+
+@dataclass(frozen=True, slots=True)
+class SessionHistoryState:
+    """Represent detached, immutable session history."""
+
+    rolls: tuple[RollRecord, ...] = ()
+    shooters: tuple[ShooterRecord, ...] = ()
+    events: tuple[SessionEvent, ...] = ()

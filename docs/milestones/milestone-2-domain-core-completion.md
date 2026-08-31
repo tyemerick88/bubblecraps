@@ -218,9 +218,14 @@ Tasks:
 
 - Keep `GamePhase` values aligned with the PAG.
 - Implement immutable `AvailableActions` and detached `GameState` values.
+- Define the rule-neutral `BetState` fields as application ID, type identifier, amount, and optional
+  number; WP2.4 owns the supported identifiers and engine mappings.
+- Define immutable history and statistics projections with tuple collections and scalar counters.
 - Define initial state: point off, no dice result, no last roll, and empty roll history.
 - Publish detached bet-layout, history, and statistics values only.
 - Centralize action computation inside `GameSession`.
+- Keep `AvailableActions` as data only; dynamic action computation begins when WP2.7 constructs the
+  live session and is never delegated to the controller or GUI.
 - Treat action flags as conservative permission to attempt a command, not acceptance guarantees.
 - Keep unsupported and Milestone 3 actions false.
 - Test that published state cannot mutate the live session or expose a live engine object.
@@ -253,6 +258,9 @@ bets into detached descriptive projections.
 Tasks:
 
 - Propose and approve the supported request and projection matrix before implementation.
+- Replace the provisional `BetState.bet_type: str` field with a `BetType(StrEnum)` containing only
+  approved Bubble Craps integration identifiers; do not treat every engine class or Interblock bet
+  name as supported automatically.
 - Use explicit reviewed bindings rather than reflection-based discovery.
 - Validate only domain shape such as known keys and finite positive amounts; leave legality to the
   engine.

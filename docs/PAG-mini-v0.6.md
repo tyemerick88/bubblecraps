@@ -354,6 +354,17 @@ outer dataclass is insufficient by itself: all nested values must also be detach
 immutable. `BetState` is an application-owned descriptive projection built only from reviewed public
 engine attributes; it does not contain a live `Bet` or encode game rules.
 
+```python
+@dataclass(frozen=True)
+class BetState:
+    bet_id: str
+    bet_type: str
+    amount: float
+    number: int | None = None
+```
+
+WP2.4 defines the supported `bet_type` identifiers and public engine-to-projection mappings.
+
 #### GamePhase
 
 ``` python
@@ -473,6 +484,14 @@ class SessionHistory:
 `SessionHistory` is the internal append-only owner. Published state uses a recursively immutable
 `SessionHistoryState` snapshot with tuple collections.
 
+```python
+@dataclass(frozen=True)
+class SessionHistoryState:
+    rolls: tuple[RollRecord, ...] = ()
+    shooters: tuple[ShooterRecord, ...] = ()
+    events: tuple[SessionEvent, ...] = ()
+```
+
 #### RollRecord
 ``` python
 @dataclass(frozen=True)
@@ -543,6 +562,17 @@ Milestone 2 reserves `UNDO`, `SESSION_SAVED`, and `SESSION_LOADED` for Milestone
 statistics are total rolls, shooters started, points established, points made, seven-outs, and net
 total-player-cash change from the configured starting bankroll. Statistics are derived from public
 engine transitions and aggregate history, never by recalculating game outcomes.
+
+```python
+@dataclass(frozen=True)
+class SessionStatisticsState:
+    total_rolls: int = 0
+    total_shooters_started: int = 0
+    points_established: int = 0
+    points_made: int = 0
+    seven_outs: int = 0
+    net_total_player_cash_change: float = 0.0
+```
 
 ------------------------------------------------------------------------
 

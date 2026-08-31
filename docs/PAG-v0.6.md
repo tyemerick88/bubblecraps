@@ -334,8 +334,18 @@ class GameState:
 ```
 
 No Qt types, mutable engine objects, or mutable session containers belong in `GameState`. WP2.2
-implements this recursively immutable state model after WP2.4 approves the public-only bet projection
-contract.
+implements this recursively immutable state model. Its rule-neutral bet projection is:
+
+```python
+@dataclass(frozen=True)
+class BetState:
+    bet_id: str
+    bet_type: str
+    amount: float
+    number: int | None = None
+```
+
+WP2.4 defines the supported `bet_type` identifiers and public engine-to-projection mappings.
 
 ------------------------------------------------------------------------
 
@@ -585,6 +595,16 @@ class SessionHistory:
     events: list[SessionEvent]
 ```
 
+Published state uses a detached snapshot:
+
+```python
+@dataclass(frozen=True)
+class SessionHistoryState:
+    rolls: tuple[RollRecord, ...] = ()
+    shooters: tuple[ShooterRecord, ...] = ()
+    events: tuple[SessionEvent, ...] = ()
+```
+
 ## RollRecord
 ``` python
 @dataclass(frozen=True)
@@ -644,6 +664,17 @@ class SessionEvent:
 ```
 
 SessionStatistics tracks cumulative statistics.
+
+```python
+@dataclass(frozen=True)
+class SessionStatisticsState:
+    total_rolls: int = 0
+    total_shooters_started: int = 0
+    points_established: int = 0
+    points_made: int = 0
+    seven_outs: int = 0
+    net_total_player_cash_change: float = 0.0
+```
 
 SessionSnapshot supports undo.
 
